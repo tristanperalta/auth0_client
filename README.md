@@ -72,6 +72,30 @@ This library covers a subset of the Auth0 API, and does not wrap endpoints Auth0
 retired. See [ROADMAP.md](ROADMAP.md) for what is implemented, what is missing, and what is deliberately
 excluded.
 
+## Choosing between the Auth0 packages
+
+Auth0 work in Elixir splits into three jobs, and no single package does all three. This library does the first one.
+
+| Job | What it means | This library | Alternatives |
+|---|---|---|---|
+| **Calling Auth0** | Your server calls the Management or Authentication API, authenticated by your client secret | **Yes** | [auth0_api](https://hex.pm/packages/auth0_api), [auth0_ex](https://hex.pm/packages/auth0_ex) |
+| **Verifying incoming JWTs** | Checking the signature, `kid` and claims of a token that arrives on a request | **No** | [auth0_jwks](https://hex.pm/packages/auth0_jwks), [prima_auth0_ex](https://hex.pm/packages/prima_auth0_ex), [auth0_plug](https://hex.pm/packages/auth0_plug) |
+| **Logging users in via the browser** | Redirecting to Auth0 and handling the callback | **No** | [ueberauth_auth0](https://hex.pm/packages/ueberauth_auth0) |
+
+**This library does not verify incoming tokens.** `Auth0Ex.Authentication.jwks/0` fetches your tenant's key set, but it performs no signature verification and pulls in no crypto library — you will need one of the alternatives above alongside it. That separation is deliberate: verifying a token on the request path is cryptographic work that belongs in a library built for it.
+
+### Against the other Management API packages
+
+- [**auth0_api**](https://hex.pm/packages/auth0_api) covers considerably more of the Auth0 surface than this library does, including recent additions. If you need breadth, look there first.
+- [**auth0_ex**](https://hex.pm/packages/auth0_ex) is the upstream this was forked from. It has had no release since March 2024.
+
+What this library offers instead of breadth:
+
+- **Req** for HTTP, so no hackney or httpoison in your dependency tree.
+- **One failure value.** Every function returns `{:ok, term}`, `:ok`, or `{:error, %Auth0Ex.Error{}}` — a single struct carrying the reason, status, body and response headers. It is an exception, so `raise` works when you would rather not handle it. See [Error handling](guides/error-handling.md).
+- **A management token cache built for concurrency.** Renewal happens before expiry rather than after, only one fetch is ever in flight so a cold cache under load makes one request rather than one per caller, `Auth0Ex.TokenState.invalidate/0` discards a token Auth0 has rejected, and the cached JWT is redacted from `inspect/1` output.
+- **`Auth0Ex.Error.retry_after/1`**, because response headers survive the parse — Auth0's Management API is rate limited.
+
 ## Authors
 
 - [Tristan Peralta](https://github.com/tristanperalta) — maintainer of this fork
