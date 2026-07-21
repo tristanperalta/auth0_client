@@ -93,8 +93,13 @@ defmodule Auth0Ex.Api do
       end
 
       @doc false
-      def do_delete(path, params) do
+      def do_delete(path, params) when is_map(params) do
         do_request(:delete, path, params)
+      end
+
+      @doc false
+      def do_delete(path, params) when is_list(params) do
+        do_delete(path, Enum.into(params, %{}))
       end
 
       # Several RBAC endpoints send their payload in the body of a DELETE. Unusual

@@ -117,8 +117,8 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 #=> {:ok, %{"ticket" => "https://your-tenant.auth0.com/lo/reset?ticket=..."}}
 ```
 
-Available resources: `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`, `Job`,
-`Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
+Available resources: `Action`, `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`,
+`Job`, `Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
 
 ### Roles and permissions
 
@@ -154,6 +154,43 @@ User.effective_permission_source_roles("auth0|abc123",
   resource_server_identifier: "https://api.example.com",
   permission_name: "write:content"
 )
+```
+
+### Actions
+
+Actions are Auth0's extensibility model — Node functions that run at points in the login flow. They replace
+Rules, which Auth0 has made read-only and **ends on 2026-11-18**.
+
+Three steps, and the third is the one people miss:
+
+```elixir
+alias Auth0Ex.Management.Action
+
+# 1. create — supported_triggers takes objects, not names.
+#    Action.triggers() lists the available ids and versions.
+{:ok, action} = Action.create(%{
+  name: "enrich-profile",
+  supported_triggers: [%{id: "post-login", version: "v3"}],
+  code: "exports.onExecutePostLogin = async (event, api) => {};"
+})
+
+# 2. deploy — Auth0 accepts this asynchronously and answers 202
+Action.deploy(action["id"])
+
+# 3. bind — until this runs, the action never executes
+Action.update_bindings("post-login", [
+  %{ref: %{type: "action_id", value: action["id"]}, display_name: "Enrich profile"}
+])
+```
+
+`update_bindings/2` **replaces every binding on the trigger** — it is not additive, and the order you give
+is the order Auth0 executes them in. To add one action without unbinding the others, read the current list
+first:
+
+```elixir
+{:ok, %{"bindings" => existing}} = Action.bindings("post-login")
+
+Action.update_bindings("post-login", existing ++ [new_binding])
 ```
 
 ### Organizations

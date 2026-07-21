@@ -43,6 +43,18 @@ defmodule Auth0Ex.ParserTest do
       assert {:ok, "<html>"} = Parser.parse(response(200, "<html>"))
     end
 
+    # Auth0 answers an accepted-but-asynchronous operation with 202 — deploying an
+    # action, for one. That is a success, not an error.
+    test "202 Accepted with a body is a success" do
+      assert {:ok, %{"id" => "ver_1"}} = Parser.parse(response(202, %{"id" => "ver_1"}))
+    end
+
+    test "every 2xx with a body succeeds" do
+      for status <- [200, 201, 202, 203, 206, 299] do
+        assert {:ok, %{"a" => 1}} = Parser.parse(response(status, %{"a" => 1}))
+      end
+    end
+
     test "an empty body on a non-2xx is still an error" do
       assert {:error, %Error{status: 404}} = Parser.parse(response(404, ""))
     end

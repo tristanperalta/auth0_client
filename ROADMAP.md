@@ -13,13 +13,13 @@ Management API index. Absence from the OpenAPI document and from the resource na
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 110 | 451 | ~24% |
+| Management v2 | 124 | 451 | ~27% |
 | Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
-Management resource groups: 7 fully covered, 6 partial, 36 with no coverage at all.
+Management resource groups: 7 fully covered, 7 partial, 35 with no coverage at all.
 
 - **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `roles`, `tickets`, `user-blocks`
-- **Partial:** `organizations` 37/42, `users` 23/39, `clients` 6/14, `connections` 6/28,
+- **Partial:** `organizations` 37/42, `users` 23/39, `actions` 14/24, `clients` 6/14, `connections` 6/28,
   `client-grants` 4/6, `jobs` 1/5
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
@@ -139,7 +139,10 @@ Ordered by value. Counts are endpoints in each group.
       configure the factors it reports
 - [ ] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — six endpoints total, all common lookups. Best
       effort-to-value ratio available
-- [ ] **`Action` (24)** — successor to Rules. Worth pulling forward given the `Rule` EOL date in §3
+- [x] **`Action` (14 of 24)** — `Auth0Ex.Management.Action`. Actions CRUD, deploy, test, versions and
+      rollback, executions, triggers and bindings. Closes the gap left by removing `Rule` in §3, ahead of
+      that end-of-life date. Actions themselves are current and actively developed — none of their
+      endpoints is deprecated. The 10 `/actions/modules` endpoints are deferred — see §7
 - [ ] **`CustomDomain` (9) + `Key` (14)** — production hardening and key rotation
 
 **Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12), client credentials on `Client`
@@ -196,9 +199,12 @@ issues; they are the things that bite under load or partial failure.
 
 ### Settled, recorded so it is not re-litigated
 
-- **A 2xx with an empty body means `:ok`.** Auth0 answers equivalent mutations with 200, 201 or 204
-  depending on the endpoint. `Parser` collapses all three, so callers never get a meaningless `{:ok, ""}`
-  and no endpoint needs its own special case.
+- **Every 2xx is a success, and a 2xx with an empty body means `:ok`.** Auth0 answers equivalent mutations
+  with 200, 201 or 204 depending on the endpoint, and accepted-but-asynchronous ones — deploying an action
+  — with 202. `Parser` treats the whole 200..299 range as success and collapses the empty-bodied ones to
+  `:ok`, so callers never get a meaningless `{:ok, ""}` and no endpoint needs its own special case.
+- **`/actions/modules` is deferred, not rejected.** The 10 endpoints share reusable code between actions,
+  which is orthogonal to replacing a Rule. This is why `actions` reads 14/24.
 - **`/organizations/{id}/enabled_connections` is deliberately not wrapped.** Auth0 ships it alongside
   `/organizations/{id}/connections` with the same semantics; neither is formally deprecated, but
   `/connections` takes a superset of the body (`organization_connection_name`, `organization_access_level`,

@@ -156,6 +156,15 @@ defmodule Auth0Ex.ApiTest do
       assert request.method == "DELETE"
       assert request.query == %{"identifier" => "user@example.com"}
     end
+
+    # do_get/2 accepted a keyword list from the start; do_delete/2 did not, and
+    # merging one into a map raises BadMapError rather than failing usefully.
+    test "do_delete accepts a keyword list of params, like do_get" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      MgmtEndpoint.delete_it("user-blocks", identifier: "user@example.com")
+
+      assert assert_receive_request().query == %{"identifier" => "user@example.com"}
+    end
   end
 
   describe "headers" do

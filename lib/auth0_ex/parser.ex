@@ -28,11 +28,11 @@ defmodule Auth0Ex.Parser do
     :ok
   end
 
-  def parse({:ok, %Req.Response{status: status, body: body}}) when status in [200, 201] do
+  # Any 2xx, not just 200 and 201 — Auth0 answers an accepted-but-asynchronous
+  # operation with 202, and deploying an action is one.
+  def parse({:ok, %Req.Response{status: status, body: body}}) when status in 200..299 do
     {:ok, body}
   end
-
-  def parse({:ok, %Req.Response{status: 204}}), do: :ok
 
   def parse({:ok, %Req.Response{status: status, body: body, headers: headers}}) do
     {:error, Error.from_response(status, body, headers)}
