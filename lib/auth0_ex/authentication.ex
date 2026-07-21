@@ -10,49 +10,51 @@ defmodule Auth0Ex.Authentication do
   @db_conn_path "dbconnections"
 
   @doc """
-  Given a user's credentials, and a connection, this endpoint will create
-  a new user using active authentication. This endpoint only works for database connections.
+  Creates a user in a database connection.
 
-  API Management https://auth0.com/docs/api/authentication#signup
+  Auth0 requires only `password` and `connection`. Everything else — `email`,
+  `username`, `phone_number`, `given_name`, `user_metadata` — goes in `opts`, so a
+  username- or phone-based connection does not have to invent an email address.
 
-  client_id: is part of your configuration and you should get via `Application.get_env/2`
-  connection: is an auth0 concept; They list the following connections `database, social, enterprise, or passwordless connection`.
+  The default database connection is named `Username-Password-Authentication`; find
+  yours under Connections → Database in the dashboard.
 
-  A use case should be, we want to use the database connection to create new signup, the value for that connection is in the dashboard inside of `Connections -> Database` or at the URL `https://manage.auth0.com/dashboard/us/<tenant>/connections/database`.
+  https://auth0.com/docs/api/authentication/signup/create-a-new-user
 
-  NOTE: The default name for the database connection is `Username-Password-Authentication`. You can create a new database connection instead.
-
-      iex> client_id = Application.get_env(:auth0_ex, :mgmt_client_id)
-      iex> connection = "Username-Password-Authentication"
-      iex> Auth0Ex.Authentication.signup(client_id, "samar@example.com", "password", connection, %{user_metadata: %{plan: "silver", team_id: "a111"}})
+      iex> Auth0Ex.Authentication.signup(client_id, "password", "Username-Password-Authentication", %{email: "samar@example.com"})
+      iex> Auth0Ex.Authentication.signup(client_id, "password", "sms-connection", %{phone_number: "+15551234567"})
+      iex> Auth0Ex.Authentication.signup(client_id, "password", connection, %{email: "a@b.com", user_metadata: %{plan: "silver"}})
   """
-  def signup(client_id, email, password, connection, extra_params \\ %{}) do
-    payload = %{
+  def signup(client_id, password, connection, opts \\ %{}) when is_map(opts) do
+    %{
       client_id: client_id,
-      email: email,
       password: password,
       connection: connection
     }
-
-    do_post("#{@db_conn_path}/signup", Map.merge(payload, extra_params))
+    |> Map.merge(opts)
+    |> then(&do_post("#{@db_conn_path}/signup", &1))
   end
 
   @doc """
-  Given a user's email address and a connection, Auth0 will send a change password email.
-  This endpoint only works for database connections.
+  Sends the user a change-password email.
 
-  https://auth0.com/docs/api/authentication#change-password
+  This does not change the password — it emails a link. To set one directly as an
+  administrator use `Auth0Ex.Management.User.update/2`, or issue a ticket with
+  `Auth0Ex.Management.Ticket.password_change/1`.
 
-      iex> client_id = Application.get_env(:auth0_ex, :mgmt_client_id)
-      iex> connection = "Username-Password-Authentication"
-      iex> Auth0Ex.Authentication.change_password(client_id, "samar@example.com", connection)
+  `opts` may carry `organization`, to brand the email for one organization.
+
+  https://auth0.com/docs/api/authentication/change-password/change-password
+
+      iex> Auth0Ex.Authentication.change_password(client_id, "samar@example.com", "Username-Password-Authentication")
+      iex> Auth0Ex.Authentication.change_password(client_id, "samar@example.com", connection, %{organization: "org_abc123"})
   """
-  def change_password(client_id, email, connection) do
-    payload = %{
-      client_id: client_id,
-      email: email,
-      connection: connection
-    }
+  def change_password(client_id, email, connection, opts \\ %{}) when is_map(opts) do
+    payload =
+      Map.merge(
+        %{client_id: client_id, email: email, connection: connection},
+        opts
+      )
 
     do_post("#{@db_conn_path}/change_password", payload)
   end

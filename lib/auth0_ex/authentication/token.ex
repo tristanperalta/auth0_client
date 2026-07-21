@@ -58,17 +58,36 @@ defmodule Auth0Ex.Authentication.Token do
   end
 
   @doc """
-  This is the OAuth 2.0 grant that server processes utilize in order to access an API.
-  Use this endpoint to directly request an access_token by using the Client Credentials
-  (a Client Id and a Client Secret).
+  The grant a server process uses to access an API as itself, with no user involved.
+
+  `opts` may carry:
+
+    * `organization` — for a token scoped to one organization
+    * `client_assertion` and `client_assertion_type` — to authenticate with Private
+      Key JWT rather than a shared secret
+
+  When using Private Key JWT there is no shared secret, so pass `nil` for
+  `client_secret`: nil values are pruned from the request, so it is simply omitted.
+  Register the key first with `Auth0Ex.Management.Client.create_credential/2`, and
+  remember to enable it on the application.
+
+  https://auth0.com/docs/api/authentication/client-credential-flow/get-token
 
       iex> Auth0Ex.Authentication.Token.client_credentials("client_id", "client_secret", "API_IDENTIFIER_aud")
+      iex> Auth0Ex.Authentication.Token.client_credentials("client_id", "client_secret", "aud", %{organization: "org_abc123"})
+      iex> Auth0Ex.Authentication.Token.client_credentials("client_id", nil, "aud", %{
+      ...>   client_assertion: signed_jwt,
+      ...>   client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+      ...> })
   """
-  def client_credentials(client_id, client_secret, audience) do
+  def client_credentials(client_id, client_secret, audience, opts \\ %{}) when is_map(opts) do
     %{
       client_id: client_id,
       client_secret: client_secret,
       audience: audience,
+      organization: Map.get(opts, :organization),
+      client_assertion: Map.get(opts, :client_assertion),
+      client_assertion_type: Map.get(opts, :client_assertion_type),
       grant_type: "client_credentials"
     }
     |> post_token()

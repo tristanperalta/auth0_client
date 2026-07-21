@@ -38,6 +38,37 @@ defmodule Auth0Ex.Management.ClientGrantTest do
     end
   end
 
+  describe "get/1" do
+    test "gets a single client grant" do
+      stub_request(%{"id" => "cgr_1", "audience" => "https://api.example.com"})
+
+      assert {:ok, %{"id" => "cgr_1"}} = ClientGrant.get("cgr_1")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/client-grants/cgr_1"
+    end
+  end
+
+  describe "organizations/2" do
+    test "lists the organizations for a grant" do
+      stub_request([%{"id" => "org_1"}])
+
+      assert {:ok, [%{"id" => "org_1"}]} = ClientGrant.organizations("cgr_1")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/client-grants/cgr_1/organizations"
+    end
+
+    test "supports checkpoint pagination" do
+      stub_request([])
+      ClientGrant.organizations("cgr_1", take: 50)
+
+      assert assert_receive_request().query == %{"take" => "50"}
+    end
+  end
+
   describe "create/1" do
     test "posts the body" do
       stub_request(%{"id" => "cgr_123"})

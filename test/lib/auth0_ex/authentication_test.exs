@@ -4,16 +4,16 @@ defmodule Auth0Ex.AuthenticationTest do
 
   alias Auth0Ex.Authentication
 
-  describe "signup/4,5" do
-    test "posts the signup payload" do
+  describe "signup/3,4" do
+    test "posts the signup payload with the email in opts" do
       stub_request(%{"email" => "samar@example.com"})
 
       assert {:ok, %{"email" => "samar@example.com"}} =
                Authentication.signup(
                  "an_id",
-                 "samar@example.com",
                  "a_password",
-                 "Username-Password-Authentication"
+                 "Username-Password-Authentication",
+                 %{email: "samar@example.com"}
                )
 
       request = assert_receive_request()
@@ -28,21 +28,43 @@ defmodule Auth0Ex.AuthenticationTest do
              }
     end
 
-    test "merges the extra params into the payload" do
+    # The point of the change: only password and connection are required, so a
+    # phone-based connection no longer has to invent an email address.
+    test "sends no email when the connection does not use one" do
+      stub_request(%{})
+
+      assert {:ok, _} =
+               Authentication.signup("an_id", "a_password", "sms-conn", %{
+                 phone_number: "+15551234567"
+               })
+
+      body = assert_receive_request().body
+      assert body["phone_number"] == "+15551234567"
+      refute Map.has_key?(body, "email")
+    end
+
+    test "works with no opts at all" do
+      stub_request(%{})
+
+      assert {:ok, _} = Authentication.signup("an_id", "a_password", "a_conn")
+
+      assert assert_receive_request().body == %{
+               "client_id" => "an_id",
+               "password" => "a_password",
+               "connection" => "a_conn"
+             }
+    end
+
+    test "merges opts into the payload" do
       stub_request(%{"email" => "samar@example.com"})
 
       assert {:ok, _} =
-               Authentication.signup(
-                 "an_id",
-                 "samar@example.com",
-                 "a_password",
-                 "Username-Password-Authentication",
-                 %{user_metadata: %{plan: "silver"}}
-               )
+               Authentication.signup("an_id", "a_password", "Username-Password-Authentication", %{
+                 email: "samar@example.com",
+                 user_metadata: %{plan: "silver"}
+               })
 
-      request = assert_receive_request()
-
-      assert request.body == %{
+      assert assert_receive_request().body == %{
                "client_id" => "an_id",
                "email" => "samar@example.com",
                "password" => "a_password",
@@ -51,15 +73,22 @@ defmodule Auth0Ex.AuthenticationTest do
              }
     end
 
-    test "lets the extra params override the base payload" do
+    test "lets opts override the base payload" do
       stub_request(%{})
 
       assert {:ok, _} =
-               Authentication.signup("an_id", "samar@example.com", "a_password", "conn", %{
-                 connection: "other"
-               })
+               Authentication.signup("an_id", "a_password", "conn", %{connection: "other"})
 
       assert assert_receive_request().body["connection"] == "other"
+    end
+
+    # signup/4 changed meaning at the same arity: it used to be
+    # (client_id, email, password, connection). The is_map guard is what turns an
+    # unmigrated call into a loud failure rather than a silently wrong request.
+    test "the old argument order raises rather than sending nonsense" do
+      assert_raise FunctionClauseError, fn ->
+        Authentication.signup("an_id", "samar@example.com", "a_password", "a_connection")
+      end
     end
   end
 
@@ -207,7 +236,7 @@ defmodule Auth0Ex.AuthenticationTest do
     # nested user_metadata that signup documents.
     test "signup is sent as JSON" do
       stub_request(%{"_id" => "1"})
-      Authentication.signup("a_client_id", "a@b.com", "pwd", "a_connection")
+      Authentication.signup("a_client_id", "pwd", "a_connection", %{email: "a@b.com"})
 
       assert assert_receive_request().content_type == "application/json"
     end
@@ -222,7 +251,8 @@ defmodule Auth0Ex.AuthenticationTest do
     test "nested user_metadata survives the round trip" do
       stub_request(%{"_id" => "1"})
 
-      Authentication.signup("a_client_id", "a@b.com", "pwd", "a_connection", %{
+      Authentication.signup("a_client_id", "pwd", "a_connection", %{
+        email: "a@b.com",
         user_metadata: %{plan: "silver", team_id: "a111"}
       })
 

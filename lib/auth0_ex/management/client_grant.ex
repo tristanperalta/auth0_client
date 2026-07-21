@@ -16,6 +16,25 @@ defmodule Auth0Ex.Management.ClientGrant do
   end
 
   @doc """
+  Gets a single client grant
+
+      iex> Auth0Ex.Management.ClientGrant.get("cgr_abc123")
+  """
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+
+  @doc """
+  Lists the organizations a client grant is associated with.
+
+  Supports offset and checkpoint pagination.
+
+      iex> Auth0Ex.Management.ClientGrant.organizations("cgr_abc123")
+      iex> Auth0Ex.Management.ClientGrant.organizations("cgr_abc123", take: 50)
+  """
+  def organizations(id, params \\ %{}) when is_binary(id) do
+    do_get("#{@path}/#{id}/organizations", params)
+  end
+
+  @doc """
   Creates a client grant
 
       iex> Auth0Ex.Management.ClientGrant.create(%{client_id: "client_id", audience: "someaud", scope: []})

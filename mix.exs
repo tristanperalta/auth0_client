@@ -86,6 +86,7 @@ defmodule Auth0Ex.Mixfile do
         "guides/users.md",
         "guides/rbac.md",
         "guides/organizations.md",
+        "guides/applications.md",
         "guides/actions.md",
         "guides/domains-and-keys.md",
         "guides/error-handling.md",

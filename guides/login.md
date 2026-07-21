@@ -101,17 +101,25 @@ These call the tenant root rather than `/api/v2`, and send no management token.
 ```elixir
 Auth0Ex.Authentication.signup(
   client_id,
-  "someone@example.com",
   "a-strong-password",
-  "Username-Password-Authentication"
+  "Username-Password-Authentication",
+  %{email: "someone@example.com"}
 )
 
 Auth0Ex.Authentication.change_password(client_id, "someone@example.com", "Username-Password-Authentication")
 ```
 
-`change_password/3` sends the user an email; it does not change the password directly. To set one as an
+Auth0 requires only `password` and `connection`, so everything else goes in the trailing map. A
+phone-based connection sends `phone_number` instead of `email`, and needs no dummy address:
+
+```elixir
+Auth0Ex.Authentication.signup(client_id, password, "sms-connection", %{phone_number: "+15551234567"})
+```
+
+`change_password/4` sends the user an email; it does not change the password directly. To set one as an
 administrator, use `Auth0Ex.Management.User.update/2`, or issue a ticket with
-`Auth0Ex.Management.Ticket.password_change/1`.
+`Auth0Ex.Management.Ticket.password_change/1`. Pass `%{organization: org_id}` to brand the email for one
+organization.
 
 Auth0 reference:
 [signup](https://auth0.com/docs/api/authentication/signup/create-a-new-user),
@@ -135,6 +143,19 @@ No user involved; the application authenticates as itself:
 
 ```elixir
 Token.client_credentials(client_id, client_secret, "https://your-api/")
+
+# scoped to one organization
+Token.client_credentials(client_id, client_secret, "https://your-api/", %{organization: "org_abc123"})
+```
+
+To authenticate with Private Key JWT instead of a shared secret, pass `nil` for the secret and supply a
+signed assertion. Registering the key is covered in [Applications](applications.md):
+
+```elixir
+Token.client_credentials(client_id, nil, "https://your-api/", %{
+  client_assertion: signed_jwt,
+  client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+})
 ```
 
 Auth0 reference:

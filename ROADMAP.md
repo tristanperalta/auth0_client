@@ -21,15 +21,15 @@ Two things that look like evidence and are not:
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 203 | 451 | ~45% |
+| Management v2 | 213 | 451 | ~47% |
 | Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
-Management resource groups: 14 fully covered, 6 partial, 29 with no coverage at all.
+Management resource groups: 16 fully covered, 4 partial, 29 with no coverage at all.
 
-- **Full:** `custom-domains`, `device-credentials`, `emails`, `grants`, `jobs`, `keys`, `logs`,
-  `resource-servers`, `roles`, `tenants`, `tickets`, `user-blocks`, `users`, `users-by-email`
-- **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `clients` 6/14,
-  `connections` 6/28, `client-grants` 4/6
+- **Full:** `client-grants`, `clients`, `custom-domains`, `device-credentials`, `emails`, `grants`,
+  `jobs`, `keys`, `logs`, `resource-servers`, `roles`, `tenants`, `tickets`, `user-blocks`, `users`,
+  `users-by-email`
+- **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `connections` 6/28
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
 RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
@@ -144,17 +144,16 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
 
 **Smaller drift, same area**
 
-These three cannot express requests Auth0 accepts. **Approach settled:** optional arguments move into an
-`opts` map, matching what Auth0 actually requires and the pattern `Token` already uses. Breaking, which is
-acceptable while nothing depends on this fork — decided so it need not be re-argued.
+Done. Optional arguments moved into an `opts` map, as decided.
 
-- [ ] `change_password/3` forces `client_id` (now optional) and cannot pass `organization`
-      → `change_password(client_id, email, connection, opts)`
-- [ ] `signup/5` forces `client_id` and `email` positionally, though only `password` and `connection` are
-      required — username- and phone-based connections have to pass a dummy email
-      → `signup(client_id, password, connection, opts)` with `email` in `opts`
-- [ ] `client_credentials/3` cannot pass `organization` or use Private Key JWT (`client_assertion`)
-      → `client_credentials(client_id, client_secret, audience, opts)`
+- [x] `change_password/4` takes `opts`, carrying `organization`
+- [x] `signup/4` is now `(client_id, password, connection, opts)` with `email` in `opts`, so phone- and
+      username-based connections need no dummy address. **The arity did not change**, so an unmigrated
+      call would have been silently misread — the `when is_map(opts)` guard turns it into a
+      `FunctionClauseError` instead, and a test pins that
+- [x] `client_credentials/4` takes `opts`, carrying `organization`, `client_assertion` and
+      `client_assertion_type`. Pass `nil` for `client_secret` when using Private Key JWT; nil values are
+      pruned, so it is omitted
 - [x] `auth0-forwarded-for` — supported on `Token.password/4` via `:forwarded_for`, so brute-force
       protection sees the end user's address rather than the server's
 

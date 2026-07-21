@@ -123,6 +123,42 @@ defmodule Auth0Ex.Authentication.TokenTest do
     end
   end
 
+  describe "client_credentials/4 options" do
+    test "sends an organization for an org-scoped token" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.client_credentials("an_id", "a_secret", "an_audience", %{organization: "org_abc"})
+
+      assert assert_receive_request().body["organization"] == "org_abc"
+    end
+
+    # Private Key JWT: there is no shared secret, so nil is passed and pruned.
+    test "omits client_secret when it is nil, and sends the assertion instead" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.client_credentials("an_id", nil, "an_audience", %{
+        client_assertion: "signed.jwt.here",
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+      })
+
+      body = assert_receive_request().body
+      refute Map.has_key?(body, "client_secret")
+      assert body["client_assertion"] == "signed.jwt.here"
+
+      assert body["client_assertion_type"] ==
+               "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+    end
+
+    test "sends no assertion keys when none are given" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.client_credentials("an_id", "a_secret", "an_audience")
+
+      body = assert_receive_request().body
+      refute Map.has_key?(body, "client_assertion")
+      refute Map.has_key?(body, "organization")
+    end
+  end
+
   describe "refresh/2,3" do
     test "posts the refresh_token grant" do
       stub_request(%{"access_token" => "a_new_token"})
