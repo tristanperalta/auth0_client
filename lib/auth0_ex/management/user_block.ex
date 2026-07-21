@@ -25,7 +25,7 @@ defmodule Auth0Ex.Management.UserBlock do
 
       iex> Auth0Ex.Management.UserBlock.unblock("some@example.com")
   """
-  def unblock(identifier), do: do_delete(@path, identifier: identifier)
+  def unblock(identifier), do: do_delete(@path, %{identifier: identifier})
 
   @doc """
   Unblock a user
