@@ -1,6 +1,6 @@
 # Configuration
 
-Every setting `Auth0Ex` reads, and what it does. For the minimum needed to make a first call, see the
+Every setting `Auth0Client` reads, and what it does. For the minimum needed to make a first call, see the
 [README](../README.md).
 
 ## Domain
@@ -9,13 +9,13 @@ Every setting `Auth0Ex` reads, and what it does. For the minimum needed to make 
 not `your-tenant`. A domain that does not end in `auth0.com` raises `ArgumentError`.
 
 ```elixir
-config :auth0_ex, domain: System.get_env("AUTH0_DOMAIN")
+config :auth0_client, domain: System.get_env("AUTH0_DOMAIN")
 ```
 
 To use a custom domain, set `custom_domain: true` to skip that check:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   domain: "auth.example.com",
   custom_domain: true
 ```
@@ -28,12 +28,12 @@ The Management API needs a token. There are two ways to supply one.
 
 ### A non-interactive client (recommended)
 
-`Auth0Ex` fetches tokens itself and renews them as they expire. Create a machine-to-machine application as
+`Auth0Client` fetches tokens itself and renews them as they expire. Create a machine-to-machine application as
 described in [Auth0's docs](https://auth0.com/docs/api/management/v2/tokens), then take the client ID and
 secret from its settings page:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   domain: System.get_env("AUTH0_DOMAIN"),
   mgmt_client_id: System.get_env("AUTH0_MGMT_CLIENT_ID"),
   mgmt_client_secret: System.get_env("AUTH0_MGMT_CLIENT_SECRET")
@@ -51,7 +51,7 @@ A token you supply is used for every request as-is. It is never refreshed, and a
 because there is nothing to refresh it with:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   domain: System.get_env("AUTH0_DOMAIN"),
   mgmt_token: System.get_env("AUTH0_MGMT_TOKEN")
 ```
@@ -61,7 +61,7 @@ config :auth0_ex,
 How many seconds before expiry a cached token is renewed. Defaults to 60.
 
 ```elixir
-config :auth0_ex, token_refresh_skew: 120
+config :auth0_client, token_refresh_skew: 120
 ```
 
 A token that expires while a request is in flight is rejected, so it is renewed slightly early. Raise this
@@ -73,7 +73,7 @@ Passed straight through to [Req](https://hexdocs.pm/req), which this library use
 [`Req.request/1` option](https://hexdocs.pm/req/Req.html#request/1) is valid:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   http_opts: [
     receive_timeout: 30_000,
     connect_options: [timeout: 10_000],
@@ -97,7 +97,7 @@ If you are reaching for `:verify_none` because of a private certificate authorit
 self-signed development host — trust it properly instead:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   http_opts: [connect_options: [transport_opts: [cacertfile: "/path/to/ca.pem"]]]
 ```
 
@@ -105,7 +105,7 @@ That is the fix in almost every case. If you genuinely intend to send credential
 connection, say so explicitly and the library will let you:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   http_opts: [connect_options: [transport_opts: [verify: :verify_none]]],
   dangerously_disable_tls_verification: true
 ```
@@ -124,7 +124,7 @@ The `User-Agent` sent with every request. Defaults to a string identifying this 
 want your own application to be identifiable in Auth0's tenant logs:
 
 ```elixir
-config :auth0_ex, user_agent: "MyApp <https://myapp.example.com>"
+config :auth0_client, user_agent: "MyApp <https://myapp.example.com>"
 ```
 
 ## Tenant settings
@@ -134,8 +134,8 @@ directory, session lifetimes, hosted pages — live in Auth0 and are read and wr
 API:
 
 ```elixir
-Auth0Ex.Management.Tenant.settings()
-Auth0Ex.Management.Tenant.update_settings(%{friendly_name: "Acme"})
+Auth0Client.Management.Tenant.settings()
+Auth0Client.Management.Tenant.update_settings(%{friendly_name: "Acme"})
 ```
 
 > #### Tenant settings affect every application {: .warning}

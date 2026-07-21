@@ -9,7 +9,7 @@ Every API function returns one of three things:
 ```elixir
 {:ok, body}                  # a 2xx with a body, decoded from JSON
 :ok                          # a 2xx with no body
-{:error, %Auth0Ex.Error{}}   # everything else
+{:error, %Auth0Client.Error{}}   # everything else
 ```
 
 `:ok` covers more than 204. Auth0 answers equivalent mutations with 200, 201 or 204 depending on the
@@ -23,14 +23,14 @@ management token can be obtained — and all three arrive as one struct, so you 
 three:
 
 ```elixir
-case Auth0Ex.Management.User.get(user_id) do
+case Auth0Client.Management.User.get(user_id) do
   {:ok, user} -> user
-  {:error, %Auth0Ex.Error{reason: :not_found}} -> nil
-  {:error, %Auth0Ex.Error{} = error} -> raise error
+  {:error, %Auth0Client.Error{reason: :not_found}} -> nil
+  {:error, %Auth0Client.Error{} = error} -> raise error
 end
 ```
 
-`Auth0Ex.Error` is an exception, so `raise error` works when you would rather not handle the failure.
+`Auth0Client.Error` is an exception, so `raise error` works when you would rather not handle the failure.
 
 ## Fields
 
@@ -58,8 +58,8 @@ whether that endpoint would have worked.
 Because response headers are kept, you can honour Auth0's `Retry-After` rather than guessing:
 
 ```elixir
-{:error, %Auth0Ex.Error{reason: :rate_limited} = error} ->
-  Process.sleep((Auth0Ex.Error.retry_after(error) || 1) * 1000)
+{:error, %Auth0Client.Error{reason: :rate_limited} = error} ->
+  Process.sleep((Auth0Client.Error.retry_after(error) || 1) * 1000)
 ```
 
 `retry_after/1` returns seconds, or `nil` when the header is absent or is not a plain number. Auth0 sends

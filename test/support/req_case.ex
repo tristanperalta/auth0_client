@@ -1,18 +1,18 @@
-defmodule Auth0Ex.ReqCase do
+defmodule Auth0Client.ReqCase do
   @moduledoc """
   Shared helpers for tests that exercise the HTTP layer.
 
-  Stubs are registered against the `Auth0Ex.Api` name, which `config/test.exs`
-  wires up via `http_opts: [plug: {Req.Test, Auth0Ex.Api}]`.
+  Stubs are registered against the `Auth0Client.Api` name, which `config/test.exs`
+  wires up via `http_opts: [plug: {Req.Test, Auth0Client.Api}]`.
 
-  `use Auth0Ex.ReqCase` alongside `use ExUnit.Case`; it only adds the Req.Test
+  `use Auth0Client.ReqCase` alongside `use ExUnit.Case`; it only adds the Req.Test
   setup callbacks and imports these helpers. Ownership is per-process, so cases
   that touch no other global state may run `async: true`.
   """
 
   defmacro __using__(_opts) do
     quote do
-      import Auth0Ex.ReqCase
+      import Auth0Client.ReqCase
 
       setup {Req.Test, :set_req_test_from_context}
       setup {Req.Test, :verify_on_exit!}
@@ -34,7 +34,7 @@ defmodule Auth0Ex.ReqCase do
   def stub_request(response) do
     test_pid = self()
 
-    Req.Test.stub(Auth0Ex.Api, fn conn ->
+    Req.Test.stub(Auth0Client.Api, fn conn ->
       {:ok, body, conn} = Plug.Conn.read_body(conn)
       send(test_pid, {:request, describe(conn, body)})
 
@@ -58,7 +58,7 @@ defmodule Auth0Ex.ReqCase do
   @doc """
   Builds a structurally valid JWT whose payload carries the given `exp`.
 
-  `Auth0Ex.Utils` decodes the middle segment to read expiry, so tokens handed to
+  `Auth0Client.Utils` decodes the middle segment to read expiry, so tokens handed to
   it must really be three base64url segments, not an opaque string.
   """
   def build_jwt(exp) do

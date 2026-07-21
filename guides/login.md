@@ -8,11 +8,11 @@ Assumes you have an Auth0 application with its client ID, and that `domain` is c
 
 ## The authorization code flow
 
-`/authorize` and the logout endpoints are browser redirects, not API calls, so `Auth0Ex.Authentication.Url`
+`/authorize` and the logout endpoints are browser redirects, not API calls, so `Auth0Client.Authentication.Url`
 builds URLs for you to redirect to rather than requesting them itself.
 
 ```elixir
-alias Auth0Ex.Authentication.{Token, Url}
+alias Auth0Client.Authentication.{Token, Url}
 
 # 1. send the browser to Auth0
 Url.authorize(client_id, %{
@@ -49,7 +49,7 @@ reference to them, so nothing sensitive appears in a URL:
 
 ```elixir
 {:ok, %{"request_uri" => request_uri}} =
-  Auth0Ex.Authentication.pushed_authorization_request(client_id, %{
+  Auth0Client.Authentication.pushed_authorization_request(client_id, %{
     client_secret: client_secret,
     response_type: "code",
     redirect_uri: "https://app.example.com/callback",
@@ -101,7 +101,7 @@ If the tenant requires MFA this call returns a 403 rather than tokens — see [M
 ## Passwordless
 
 ```elixir
-Auth0Ex.Authentication.passwordless_start(%{
+Auth0Client.Authentication.passwordless_start(%{
   client_id: client_id,
   connection: "email",
   email: "user@example.com",
@@ -124,7 +124,7 @@ A CLI, a TV app, a headless installer — anything that cannot host a redirect. 
 user types it in on their phone, and the device polls until they are done.
 
 ```elixir
-{:ok, start} = Auth0Ex.Authentication.device_code(client_id, %{
+{:ok, start} = Auth0Client.Authentication.device_code(client_id, %{
   scope: "openid profile offline_access",
   audience: "https://your-api/"
 })
@@ -141,11 +141,11 @@ def poll(client_id, device_code, interval) do
     {:ok, tokens} ->
       {:ok, tokens}
 
-    {:error, %Auth0Ex.Error{body: %{"error" => "authorization_pending"}}} ->
+    {:error, %Auth0Client.Error{body: %{"error" => "authorization_pending"}}} ->
       Process.sleep(interval * 1000)
       poll(client_id, device_code, interval)
 
-    {:error, %Auth0Ex.Error{body: %{"error" => "slow_down"}}} ->
+    {:error, %Auth0Client.Error{body: %{"error" => "slow_down"}}} ->
       Process.sleep((interval + 5) * 1000)
       poll(client_id, device_code, interval + 5)
 
@@ -159,7 +159,7 @@ poll(client_id, start["device_code"], start["interval"])
 
 > #### Bailing on the first error never completes the login {: .warning}
 >
-> `authorization_pending` arrives as `{:error, %Auth0Ex.Error{}}` like anything else, because that is what
+> `authorization_pending` arrives as `{:error, %Auth0Client.Error{}}` like anything else, because that is what
 > Auth0 returns. Match on the code in `body`, not on the tuple. `expired_token` and `access_denied` are the
 > terminal ones — the codes ran out, or the user refused.
 
@@ -199,26 +199,26 @@ Auth0 reference:
 These call the tenant root rather than `/api/v2`, and send no management token.
 
 ```elixir
-Auth0Ex.Authentication.signup(
+Auth0Client.Authentication.signup(
   client_id,
   "a-strong-password",
   "Username-Password-Authentication",
   %{email: "someone@example.com"}
 )
 
-Auth0Ex.Authentication.change_password(client_id, "someone@example.com", "Username-Password-Authentication")
+Auth0Client.Authentication.change_password(client_id, "someone@example.com", "Username-Password-Authentication")
 ```
 
 Auth0 requires only `password` and `connection`, so everything else goes in the trailing map. A
 phone-based connection sends `phone_number` instead of `email`, and needs no dummy address:
 
 ```elixir
-Auth0Ex.Authentication.signup(client_id, password, "sms-connection", %{phone_number: "+15551234567"})
+Auth0Client.Authentication.signup(client_id, password, "sms-connection", %{phone_number: "+15551234567"})
 ```
 
 `change_password/4` sends the user an email; it does not change the password directly. To set one as an
-administrator, use `Auth0Ex.Management.User.update/2`, or issue a ticket with
-`Auth0Ex.Management.Ticket.password_change/1`. Pass `%{organization: org_id}` to brand the email for one
+administrator, use `Auth0Client.Management.User.update/2`, or issue a ticket with
+`Auth0Client.Management.Ticket.password_change/1`. Pass `%{organization: org_id}` to brand the email for one
 organization.
 
 Auth0 reference:
@@ -228,7 +228,7 @@ Auth0 reference:
 ## Reading a user's profile
 
 ```elixir
-Auth0Ex.Authentication.userinfo(access_token)
+Auth0Client.Authentication.userinfo(access_token)
 #=> {:ok, %{"sub" => "auth0|abc123", "email" => "someone@example.com"}}
 ```
 
@@ -274,8 +274,8 @@ Auth0 reference:
 ## Verifying tokens yourself
 
 ```elixir
-Auth0Ex.Authentication.jwks()
-Auth0Ex.Authentication.openid_configuration()
+Auth0Client.Authentication.jwks()
+Auth0Client.Authentication.openid_configuration()
 ```
 
 Both are unauthenticated and effectively static. Cache them — this library does not, so calling them per

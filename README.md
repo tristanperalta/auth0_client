@@ -1,12 +1,16 @@
-# Auth0Ex
+# Auth0Client
 
 ![Build Status](https://github.com/tristanperalta/auth0_client/actions/workflows/main.yml/badge.svg)
 
 > An elixir client library for Auth0
 
-This is a fork of [techgaun/auth0_ex](https://github.com/techgaun/auth0_ex). The repository is named
-`auth0_client`, but the OTP application, module namespace and config key remain `:auth0_ex` /
-`Auth0Ex` so the library stays drop-in compatible with the original.
+This is a fork of [techgaun/auth0_ex](https://github.com/techgaun/auth0_ex), named `auth0_client`
+throughout — the repository, the OTP application, the module namespace and the config key.
+
+It is no longer drop-in compatible with the upstream: the HTTP client is Req rather than HTTPoison, every
+failure is a single `Auth0Client.Error` struct, and the deprecated `Login`, `Rule` and `Blacklist` modules
+are gone. Migrating from `auth0_ex` means renaming `Auth0Ex` to `Auth0Client`, renaming the `:auth0_ex`
+config key to `:auth0_client`, and reading [Error handling](guides/error-handling.md).
 
 ## Installation
 
@@ -14,18 +18,19 @@ This fork is not published to hex. Depend on it from git:
 
 ```elixir
 def deps do
-  [{:auth0_ex, github: "tristanperalta/auth0_client"}]
+  [{:auth0_client, github: "tristanperalta/auth0_client"}]
 end
 ```
 
-The `auth0_ex` package on hex is the upstream project and does not contain this fork's changes.
+Neither this fork nor the name `auth0_client` is on hex. The `auth0_ex` package there is the upstream
+project, and does not contain this fork's changes.
 
 ## Configuration
 
 A `domain`, plus credentials for the Management API if you use it:
 
 ```elixir
-config :auth0_ex,
+config :auth0_client,
   domain: System.get_env("AUTH0_DOMAIN"),
   mgmt_client_id: System.get_env("AUTH0_MGMT_CLIENT_ID"),
   mgmt_client_secret: System.get_env("AUTH0_MGMT_CLIENT_SECRET")
@@ -37,18 +42,18 @@ See [Configuration](guides/configuration.md) for custom domains, pre-created tok
 
 ## Usage
 
-Each Management resource is a module under `Auth0Ex.Management`:
+Each Management resource is a module under `Auth0Client.Management`:
 
 ```elixir
-Auth0Ex.Management.User.all(%{q: "email:*@example.com"})
+Auth0Client.Management.User.all(%{q: "email:*@example.com"})
 #=> {:ok, [%{"user_id" => "auth0|abc123", ...}]}
 ```
 
 Available resources: `Action`, `Client`, `ClientGrant`, `Connection`, `CustomDomain`, `DeviceCredential`,
-`EmailProvider`, `Grant`, `Guardian`, `Job`, `Key`, `Log`, `Organization`, `ResourceServer`, `Role`,
-`Tenant`, `Ticket`, `User`, `UserBlock`.
+`EmailProvider`, `Grant`, `Group`, `Guardian`, `Job`, `Key`, `Log`, `Organization`, `RefreshToken`,
+`ResourceServer`, `Role`, `Session`, `Tenant`, `Ticket`, `User`, `UserBlock`.
 
-The Authentication API lives under `Auth0Ex.Authentication`.
+The Authentication API lives under `Auth0Client.Authentication`.
 
 ## Guides
 
@@ -64,17 +69,18 @@ The Authentication API lives under `Auth0Ex.Authentication`.
 | [Connections and provisioning](guides/connections.md) | Identity providers, SCIM, directory sync |
 | [Actions](guides/actions.md) | Extending the login flow |
 | [Custom domains and keys](guides/domains-and-keys.md) | Branded login domains, signing-key rotation |
-| [Error handling](guides/error-handling.md) | Return shapes, `Auth0Ex.Error`, rate limiting |
+| [Error handling](guides/error-handling.md) | Return shapes, `Auth0Client.Error`, rate limiting |
 
 ## API coverage
 
 This library covers a subset of the Auth0 API, and does not wrap endpoints Auth0 has deprecated or
-retired. See [ROADMAP.md](ROADMAP.md) for what is implemented, what is missing, and what is deliberately
+retired. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release, and
+[ROADMAP.md](ROADMAP.md) for what is implemented, what is missing, and what is deliberately
 excluded.
 
 ## Comparison with other Auth0 libraries
 
-Compared against every Auth0 package on hex, as of July 2026. `auth0_ex` is the upstream this was forked from.
+Compared against every Auth0 package on hex, as of July 2026. This library moves; treat its column as a snapshot and check [ROADMAP.md](ROADMAP.md) for current coverage. `auth0_ex` is the upstream this was forked from.
 
 ### Auth0 features
 
@@ -83,7 +89,7 @@ Compared against every Auth0 package on hex, as of July 2026. `auth0_ex` is the 
 | **Users** — CRUD, search, blocks | ✅ | ✅ | ✅ | — | — | — | — |
 | **Tickets** — password change, email verification | ✅ | ✅ | ✅ | — | — | — | — |
 | **Roles and permissions** (RBAC) | ✅ | ✅ | — | — | — | — | — |
-| **Organizations** (B2B) | ✅ | ✅ | — | — | — | — | — |
+| **Organizations** (B2B), groups | ✅ | ✅ | — | — | — | — | — |
 | **Clients and grants** | ✅ | ✅ | ✅ | — | — | — | — |
 | **Connections** | ✅ | ✅ | ✅ | — | — | — | — |
 | **Actions** | ✅ | ✅ | — | — | — | — | — |
@@ -93,7 +99,7 @@ Compared against every Auth0 package on hex, as of July 2026. `auth0_ex` is the 
 | **Logs, log streams** | ✅ | ✅ | ✅ | — | — | — | — |
 | **Branding, prompts, email templates** | — | ✅ | — | — | — | — | — |
 | **Attack protection, anomaly** | — | ✅ | — | — | — | — | — |
-| **Sessions, refresh tokens** | — | ✅ | — | — | — | — | — |
+| **Sessions, refresh tokens** | ✅ | ✅ | — | — | — | — | — |
 | **Login flows** — auth code, PKCE, passwordless | ✅ | — | ✅ | — | — | — | ✅ |
 | **Machine-to-machine tokens** | ✅ | ✅ | ✅ | ✅ | — | — | — |
 | **Browser login as an Ueberauth strategy** | — | — | — | — | — | — | ✅ |
@@ -107,7 +113,7 @@ Compared against every Auth0 package on hex, as of July 2026. `auth0_ex` is the 
 
 | | **this library** | auth0_api | auth0_ex | prima_auth0_ex | auth0_jwks | auth0_plug | ueberauth_auth0 |
 |---|---|---|---|---|---|---|---|
-| Management resource groups | 19 | **~44** | 13 ² | 0 | 0 | 0 | 0 |
+| Management resource groups | 22 | **~44** | 13 ² | 0 | 0 | 0 | 0 |
 | HTTP client | **Req** | HTTPoison | HTTPoison | Telepoison | HTTPoison | none | OAuth2 |
 | Single error struct | ✅ | — | — | — | — | — | — |
 | Response headers preserved | ✅ | — | — | — | — | — | — |
@@ -125,9 +131,9 @@ Compared against every Auth0 package on hex, as of July 2026. `auth0_ex` is the 
 
 ### Which to use
 
-**This library does not verify incoming tokens.** `Auth0Ex.Authentication.jwks/0` fetches your tenant's key set, but performs no signature verification and pulls in no crypto library. Pair it with `auth0_jwks` or `prima_auth0_ex` if you need to authenticate requests. That separation is deliberate — verifying a token on the request path is cryptographic work that belongs in a library built for it, and none of the Management API packages above attempt it.
+**This library does not verify incoming tokens.** `Auth0Client.Authentication.jwks/0` fetches your tenant's key set, but performs no signature verification and pulls in no crypto library. Pair it with `auth0_jwks` or `prima_auth0_ex` if you need to authenticate requests. That separation is deliberate — verifying a token on the request path is cryptographic work that belongs in a library built for it, and none of the Management API packages above attempt it.
 
-**If you need Management API breadth, use `auth0_api`.** It covers roughly twice the surface, including branding, attack protection, sessions and several 2025-era additions. This library covers the resources most applications actually reach for, and spends its effort on the transport instead: one error struct that carries the response headers, and a management token cache designed for concurrent callers.
+**If you need Management API breadth, use `auth0_api`.** It covers roughly twice the surface, including branding, attack protection, email templates and several 2025-era additions. This library covers the resources most applications actually reach for, and spends its effort on the transport instead: one error struct that carries the response headers, and a management token cache designed for concurrent callers.
 
 ## Authors
 

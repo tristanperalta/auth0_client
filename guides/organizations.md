@@ -10,7 +10,7 @@ Auth0 reference: [Organizations](https://auth0.com/docs/api/management/v2/organi
 ## Creating one and adding members
 
 ```elixir
-alias Auth0Ex.Management.Organization
+alias Auth0Client.Management.Organization
 
 # `name` must be lowercase with no spaces; display_name is the human-facing one
 {:ok, org} = Organization.create(%{name: "acme-corp", display_name: "Acme Corp"})
@@ -34,7 +34,7 @@ Organization.member_roles(org["id"], "auth0|abc123")
 >
 > The same user can be an admin of one organization and a read-only member of another.
 > `Organization.member_roles/3` reports a member's roles inside one organization;
-> `Auth0Ex.Management.User.roles/2` reports roles assigned tenant-wide. They are different grants.
+> `Auth0Client.Management.User.roles/2` reports roles assigned tenant-wide. They are different grants.
 
 As with tenant-wide RBAC, `member_effective_roles/3` resolves roles inherited through groups, and
 `member_effective_role_source_groups/3` says which group granted one.
@@ -71,7 +71,7 @@ Organization.add_connection(org["id"], %{
 })
 ```
 
-The connection must already exist in the tenant — see `Auth0Ex.Management.Connection`.
+The connection must already exist in the tenant — see `Auth0Client.Management.Connection`.
 `assign_membership_on_login: true` adds users to the organization automatically the first time they log in
 through it.
 

@@ -12,7 +12,7 @@ Auth0 reference: [Actions](https://auth0.com/docs/api/management/v2/actions).
 Three steps, and the third is the one people miss.
 
 ```elixir
-alias Auth0Ex.Management.Action
+alias Auth0Client.Management.Action
 
 # 1. create — supported_triggers takes objects, not names.
 #    Action.triggers() lists the available ids and versions.

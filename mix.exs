@@ -1,12 +1,12 @@
-defmodule Auth0Ex.Mixfile do
+defmodule Auth0Client.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/tristanperalta/auth0_client"
-  @version "0.9.0"
+  @version "1.0.0"
 
   def project do
     [
-      app: :auth0_ex,
+      app: :auth0_client,
       version: @version,
       elixir: "~> 1.17",
       build_embedded: Mix.env() == :prod,
@@ -49,7 +49,7 @@ defmodule Auth0Ex.Mixfile do
 
   def application do
     [
-      mod: {Auth0Ex.Application, []}
+      mod: {Auth0Client.Application, []}
     ]
   end
 
@@ -91,55 +91,56 @@ defmodule Auth0Ex.Mixfile do
         "guides/actions.md",
         "guides/domains-and-keys.md",
         "guides/error-handling.md",
+        "CHANGELOG.md",
         "ROADMAP.md"
       ],
       groups_for_extras: [
         Guides: ~r/guides\//,
-        Project: ~r/ROADMAP/
+        Project: ~r/ROADMAP|CHANGELOG/
       ],
       groups_for_modules: [
         "Authentication API": [
-          Auth0Ex.Authentication,
-          Auth0Ex.Authentication.Mfa,
-          Auth0Ex.Authentication.Token,
-          Auth0Ex.Authentication.Url
+          Auth0Client.Authentication,
+          Auth0Client.Authentication.Mfa,
+          Auth0Client.Authentication.Token,
+          Auth0Client.Authentication.Url
         ],
         "Management API": [
-          Auth0Ex.Management.Action,
-          Auth0Ex.Management.Client,
-          Auth0Ex.Management.ClientGrant,
-          Auth0Ex.Management.Connection,
-          Auth0Ex.Management.Connection.DirectoryProvisioning,
-          Auth0Ex.Management.Connection.Scim,
-          Auth0Ex.Management.CustomDomain,
-          Auth0Ex.Management.DeviceCredential,
-          Auth0Ex.Management.EmailProvider,
-          Auth0Ex.Management.Grant,
-          Auth0Ex.Management.Group,
-          Auth0Ex.Management.Guardian,
-          Auth0Ex.Management.Job,
-          Auth0Ex.Management.Key,
-          Auth0Ex.Management.Log,
-          Auth0Ex.Management.Organization,
-          Auth0Ex.Management.RefreshToken,
-          Auth0Ex.Management.ResourceServer,
-          Auth0Ex.Management.Role,
-          Auth0Ex.Management.Session,
-          Auth0Ex.Management.Tenant,
-          Auth0Ex.Management.Ticket,
-          Auth0Ex.Management.User,
-          Auth0Ex.Management.UserBlock
+          Auth0Client.Management.Action,
+          Auth0Client.Management.Client,
+          Auth0Client.Management.ClientGrant,
+          Auth0Client.Management.Connection,
+          Auth0Client.Management.Connection.DirectoryProvisioning,
+          Auth0Client.Management.Connection.Scim,
+          Auth0Client.Management.CustomDomain,
+          Auth0Client.Management.DeviceCredential,
+          Auth0Client.Management.EmailProvider,
+          Auth0Client.Management.Grant,
+          Auth0Client.Management.Group,
+          Auth0Client.Management.Guardian,
+          Auth0Client.Management.Job,
+          Auth0Client.Management.Key,
+          Auth0Client.Management.Log,
+          Auth0Client.Management.Organization,
+          Auth0Client.Management.RefreshToken,
+          Auth0Client.Management.ResourceServer,
+          Auth0Client.Management.Role,
+          Auth0Client.Management.Session,
+          Auth0Client.Management.Tenant,
+          Auth0Client.Management.Ticket,
+          Auth0Client.Management.User,
+          Auth0Client.Management.UserBlock
         ],
         Core: [
-          Auth0Ex,
-          Auth0Ex.Config,
-          Auth0Ex.Error
+          Auth0Client,
+          Auth0Client.Config,
+          Auth0Client.Error
         ],
         Internals: [
-          Auth0Ex.Api,
-          Auth0Ex.Parser,
-          Auth0Ex.TokenState,
-          Auth0Ex.Utils
+          Auth0Client.Api,
+          Auth0Client.Parser,
+          Auth0Client.TokenState,
+          Auth0Client.Utils
         ]
       ],
       source_ref: "v#{@version}",

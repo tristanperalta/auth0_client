@@ -11,7 +11,7 @@ Auth0 reference: [Connections](https://auth0.com/docs/api/management/v2/connecti
 ## The basics
 
 ```elixir
-alias Auth0Ex.Management.Connection
+alias Auth0Client.Management.Connection
 
 Connection.all(strategy: "auth0")
 Connection.get("con_abc123")
@@ -40,7 +40,7 @@ Connection.update_clients("con_abc123", [
 ])
 
 # the mirror: which connections one application can use
-Auth0Ex.Management.Client.connections("abc123")
+Auth0Client.Management.Client.connections("abc123")
 ```
 
 Setting `enabled_clients` through `update/2` replaces the whole list, so it silently drops any application
@@ -55,7 +55,7 @@ pagination — omit `from` on the first call, then pass the `next` value the res
 ```elixir
 case Connection.status("con_abc123") do
   {:ok, _} -> :online
-  {:error, %Auth0Ex.Error{status: 404}} -> :offline
+  {:error, %Auth0Client.Error{status: 404}} -> :offline
   {:error, error} -> {:error, error}
 end
 ```
@@ -80,7 +80,7 @@ Both attach to a connection, and a connection has at most one of each — so eve
 The provider authenticates with a token you issue:
 
 ```elixir
-alias Auth0Ex.Management.Connection.Scim
+alias Auth0Client.Management.Connection.Scim
 
 # start from Auth0's defaults if you don't need a custom mapping
 Scim.default_mapping("con_abc123")
@@ -113,7 +113,7 @@ Scim.delete("con_abc123")
 ### Directory provisioning — outbound
 
 ```elixir
-alias Auth0Ex.Management.Connection.DirectoryProvisioning, as: DP
+alias Auth0Client.Management.Connection.DirectoryProvisioning, as: DP
 
 DP.create("con_abc123", %{
   mapping: [%{auth0: "email", idp: "mail"}],
@@ -135,7 +135,7 @@ carries an `id` and nothing else; Auth0 rejects any other key.
 `synchronize/1` returns once the run is *accepted*, not once it finishes. Read `synchronized_groups/2` or
 the configuration itself to see the result.
 
-Synced groups land in the tenant as `Auth0Ex.Management.Group`, where they carry roles — which is why that
+Synced groups land in the tenant as `Auth0Client.Management.Group`, where they carry roles — which is why that
 module has no `create/1`. See [Roles and permissions](rbac.md).
 
 Both modules also list every configuration in the tenant, which is the quickest way to find out what is

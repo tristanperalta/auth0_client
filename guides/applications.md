@@ -11,7 +11,7 @@ Auth0 reference: [Clients](https://auth0.com/docs/api/management/v2/clients),
 ## The basics
 
 ```elixir
-alias Auth0Ex.Management.Client
+alias Auth0Client.Management.Client
 
 Client.all(fields: "name,client_id")
 Client.get("abc123")
@@ -27,7 +27,7 @@ Searching with `q` needs checkpoint pagination — `from` and `take` rather than
 rate limits.
 
 `Client.connections/2` reads the application-to-connection relationship from one side;
-`Auth0Ex.Management.Connection.clients/2` reads it from the other, and `update_clients/2` is how you change
+`Auth0Client.Management.Connection.clients/2` reads it from the other, and `update_clients/2` is how you change
 it. See [Connections](connections.md).
 
 ## Private Key JWT and mTLS
@@ -80,7 +80,7 @@ Once enabled, request tokens by signing a JWT with the private key and passing i
 There is no shared secret, so `client_secret` is `nil`:
 
 ```elixir
-Auth0Ex.Authentication.Token.client_credentials(client_id, nil, "https://your-api/", %{
+Auth0Client.Authentication.Token.client_credentials(client_id, nil, "https://your-api/", %{
   client_assertion: signed_jwt,
   client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 })
@@ -107,7 +107,7 @@ Client.register_metadata_document(%{external_client_id: "https://app.example.com
 A client grant authorises an application to request tokens for an API, with a fixed set of scopes.
 
 ```elixir
-alias Auth0Ex.Management.ClientGrant
+alias Auth0Client.Management.ClientGrant
 
 ClientGrant.all(audience: "https://api.example.com")
 ClientGrant.get("cgr_abc123")
@@ -119,5 +119,5 @@ ClientGrant.delete("cgr_abc123")
 ClientGrant.organizations("cgr_abc123")
 ```
 
-Do not confuse these with `Auth0Ex.Management.Grant`, which records an end user's *consent* — see
+Do not confuse these with `Auth0Client.Management.Grant`, which records an end user's *consent* — see
 [Managing users](users.md).

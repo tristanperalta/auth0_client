@@ -14,7 +14,7 @@ A custom domain serves login from `auth.yourapp.com` instead of `your-tenant.aut
 skipping the third leaves it inert:
 
 ```elixir
-alias Auth0Ex.Management.CustomDomain
+alias Auth0Client.Management.CustomDomain
 
 # 1. register it — the response carries the DNS record you must add
 {:ok, domain} = CustomDomain.create(%{
@@ -51,7 +51,7 @@ These are the keys Auth0 signs your JWTs with. Rotation is two steps separated b
 back to back is what causes an outage:
 
 ```elixir
-alias Auth0Ex.Management.Key
+alias Auth0Client.Management.Key
 
 Key.signing_keys()
 #=> {:ok, [%{"kid" => "abc", "current" => true}, %{"kid" => "xyz", "next" => true}]}

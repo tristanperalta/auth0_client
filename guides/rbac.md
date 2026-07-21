@@ -11,7 +11,7 @@ Auth0 reference: [Roles](https://auth0.com/docs/api/management/v2/roles),
 ## Creating a role and granting it
 
 ```elixir
-alias Auth0Ex.Management.{Role, User}
+alias Auth0Client.Management.{Role, User}
 
 {:ok, role} = Role.create(%{name: "editor", description: "Can edit content"})
 
@@ -38,7 +38,7 @@ String-keyed maps work too, so a permission read back from `Role.permissions/2` 
 into `Role.remove_permissions/2`.
 
 The API identifier is the one you gave the API in Auth0, not its URL — check
-`Auth0Ex.Management.ResourceServer.all/0` if you are unsure.
+`Auth0Client.Management.ResourceServer.all/0` if you are unsure.
 
 ## Assigning directly to a user
 
@@ -75,7 +75,7 @@ A group carries roles, and every member inherits them. That is how a user ends u
 assigned them directly — the answer `effective_role_source_groups/2` gives you.
 
 ```elixir
-alias Auth0Ex.Management.Group
+alias Auth0Client.Management.Group
 
 Group.all(connection_id: "con_abc123")
 Group.get("grp_abc123")
@@ -87,7 +87,7 @@ Group.remove_roles("grp_abc123", ["rol_1"])
 ```
 
 There is no `Group.create/1`. **Groups come from the identity provider**, selected with
-`Auth0Ex.Management.Connection.DirectoryProvisioning.replace_synchronized_groups/2` — see
+`Auth0Client.Management.Connection.DirectoryProvisioning.replace_synchronized_groups/2` — see
 [Connections](connections.md). `Group.delete/1` drops one from the tenant, but if the connection still
 synchronizes it, the next run brings it back.
 

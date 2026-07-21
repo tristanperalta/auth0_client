@@ -11,7 +11,7 @@ Auth0 reference: [Users](https://auth0.com/docs/api/management/v2/users),
 ## The basics
 
 ```elixir
-alias Auth0Ex.Management.User
+alias Auth0Client.Management.User
 
 User.all(%{q: "email:*@example.com"})
 #=> {:ok, [%{"user_id" => "auth0|abc123", ...}]}
@@ -57,11 +57,11 @@ For anything larger, run an export rather than paginating.
 
 ## Password resets
 
-To email the user a reset link, use `Auth0Ex.Authentication.change_password/3` — see
+To email the user a reset link, use `Auth0Client.Authentication.change_password/3` — see
 [Logging users in](login.md). To generate a link yourself:
 
 ```elixir
-Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
+Auth0Client.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 #=> {:ok, %{"ticket" => "https://your-tenant.auth0.com/lo/reset?ticket=..."}}
 ```
 
@@ -82,7 +82,7 @@ User.revoke_access("auth0|abc123")         # both at once
 Or one at a time, using the ids those listings return:
 
 ```elixir
-alias Auth0Ex.Management.{RefreshToken, Session}
+alias Auth0Client.Management.{RefreshToken, Session}
 
 Session.get(session_id)
 Session.delete(session_id)                 # ends the session
@@ -107,10 +107,10 @@ nothing.
 except that it also filters by `client_id`.
 
 To revoke a refresh token as its *holder* rather than as an administrator, with no Management token
-involved, use `Auth0Ex.Authentication.Token.revoke/3` — see [Logging users in](login.md).
+involved, use `Auth0Client.Authentication.Token.revoke/3` — see [Logging users in](login.md).
 
 To sign a user out of **every application**, not just this tenant's,
-`Auth0Ex.Authentication.global_token_revocation/3` is Auth0's Universal Logout endpoint. It authenticates
+`Auth0Client.Authentication.global_token_revocation/3` is Auth0's Universal Logout endpoint. It authenticates
 with a bearer token you supply rather than a management token, and — like everything above — it destroys
 sessions and refresh tokens but leaves already-issued access tokens working until they expire.
 
@@ -120,7 +120,7 @@ A grant records that a user consented to an application's scopes. Deleting one m
 consent again and invalidates the refresh tokens issued under it.
 
 ```elixir
-alias Auth0Ex.Management.Grant
+alias Auth0Client.Management.Grant
 
 Grant.all(user_id: "auth0|abc123")
 Grant.delete("cgr_abc123")                 # one application
@@ -136,7 +136,7 @@ Jobs are asynchronous: they return immediately and do the work in the background
 then check for errors.
 
 ```elixir
-alias Auth0Ex.Management.Job
+alias Auth0Client.Management.Job
 
 # Export — poll until the job carries a `location` to download from
 {:ok, job} = Job.users_exports(%{connection_id: "con_abc123", format: "json"})

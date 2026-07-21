@@ -54,7 +54,7 @@ parameter shape either.
       `/oauth/revoke` as `application/x-www-form-urlencoded`, per RFC 6749 and Auth0's docs.
       `/dbconnections/*` stays JSON — see the encoding rule in §7
 - [x] URL-only builders for endpoints that are browser redirects rather than calls the library should
-      make — `Auth0Ex.Authentication.Url`
+      make — `Auth0Client.Authentication.Url`
 - [x] Multipart uploads — `do_post_multipart/2`, for `POST /jobs/users-imports`, which Auth0 accepts in no
       other encoding. Needs `Utils.drop_header/2` rather than `merge_headers/2`: Req sets the multipart
       content-type with `put_new_header`, so the default `application/json` would win and the boundary
@@ -95,14 +95,14 @@ parameter shape either.
 
 This library does not support endpoints Auth0 has deprecated or retired.
 
-- [x] **`Auth0Ex.Management.Rule`** — deprecated 2023-05-16, read-only since 2024-11-18, end-of-life
+- [x] **`Auth0Client.Management.Rule`** — deprecated 2023-05-16, read-only since 2024-11-18, end-of-life
       2026-11-18. `Action` is the replacement (§5)
       [Lifecycle](https://auth0.com/docs/troubleshoot/product-lifecycle/deprecations-and-migrations)
-- [x] **The whole `Auth0Ex.Authentication.Login` module** — `database/6` (`POST /oauth/ro`, deprecated
+- [x] **The whole `Auth0Client.Authentication.Login` module** — `database/6` (`POST /oauth/ro`, deprecated
       2017-07-08) and `social/4` (`POST /oauth/access_token`) were its only two functions. Replacements are
       the Resource Owner Password grant and `GET /authorize` respectively, both in §4
 - [x] **`Authentication.tokeninfo/1`** (`POST /tokeninfo`) — superseded by `GET /userinfo`
-- [x] **`Auth0Ex.Management.Blacklist`** — `/blacklists/tokens` has no entry in the OpenAPI document and no
+- [x] **`Auth0Client.Management.Blacklist`** — `/blacklists/tokens` has no entry in the OpenAPI document and no
       page in the docs nav
 - [x] **The `:v2_search` config flag** — search v2 was retired 2019-06-30, so the flag selected an engine
       that no longer exists
@@ -133,7 +133,7 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
 **P1 — done. An MFA login can now be completed end to end.**
 
 - [x] Passwordless — `Authentication.passwordless_start/1` and `Token.passwordless/5`
-- [x] MFA — `Auth0Ex.Authentication.Mfa` (`challenge/1`, `associate/2`, `authenticators/1`,
+- [x] MFA — `Auth0Client.Authentication.Mfa` (`challenge/1`, `associate/2`, `authenticators/1`,
       `delete_authenticator/2`) plus `Token.verify_otp/4`, `verify_oob/4` and `verify_recovery_code/4`.
       Closes the gap where `Token.password/4` reported `mfa_required` and nothing could act on it
 - [x] JWKS and OIDC discovery — `Authentication.jwks/0` and `openid_configuration/0`
@@ -176,7 +176,7 @@ Done. Optional arguments moved into an `opts` map, as decided.
 
 Ordered by value. Counts are endpoints in each group.
 
-- [x] **`Role` (13 of 13)** — `Auth0Ex.Management.Role`. CRUD, permissions, users and groups. The group is
+- [x] **`Role` (13 of 13)** — `Auth0Client.Management.Role`. CRUD, permissions, users and groups. The group is
       fully covered
 - [x] **`User` RBAC** — `assign_roles/2`, `remove_roles/2`, the permissions endpoints, `organizations/2`,
       and the `effective-*` lookups that resolve access inherited through groups
@@ -184,28 +184,28 @@ Ordered by value. Counts are endpoints in each group.
       `revoke_access/2`, groups, connected accounts and risk-assessment clearing. The group is fully covered
 - [x] **Complete `Job` (5 of 5)** — `users_imports/3`, `users_exports/1`, `get/1` and `errors/1`. Bulk
       migration works in both directions; import required multipart support, added in §1
-- [x] **`Organization` (37 of 42)** — `Auth0Ex.Management.Organization`. CRUD, members, member roles,
+- [x] **`Organization` (37 of 42)** — `Auth0Client.Management.Organization`. CRUD, members, member roles,
       invitations, connections, client grants, discovery domains and groups. The five `/enabled_connections`
       endpoints are deliberately not wrapped — see §7
-- [x] **`Guardian` (30 of 36)** — `Auth0Ex.Management.Guardian`. Factors, policies, enrollment tickets, and
+- [x] **`Guardian` (30 of 36)** — `Auth0Client.Management.Guardian`. Factors, policies, enrollment tickets, and
       phone, push and Duo provider configuration. Pairs with `User.enrollments/1` and
       `User.delete_authenticators/1`, which previously had no configuration side. The six
       `/guardian/factors/sms/*` endpoints are deprecated and not wrapped — see §7
-- [x] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — `Auth0Ex.Management.Grant` and
-      `Auth0Ex.Management.Tenant`. `users-by-email` is `User.by_email/2` rather than a one-function module,
+- [x] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — `Auth0Client.Management.Grant` and
+      `Auth0Client.Management.Tenant`. `users-by-email` is `User.by_email/2` rather than a one-function module,
       since that is where a reader looks for it; the group is still fully covered
-- [x] **`Action` (14 of 24)** — `Auth0Ex.Management.Action`. Actions CRUD, deploy, test, versions and
+- [x] **`Action` (14 of 24)** — `Auth0Client.Management.Action`. Actions CRUD, deploy, test, versions and
       rollback, executions, triggers and bindings. Closes the gap left by removing `Rule` in §3, ahead of
       that end-of-life date. Actions themselves are current and actively developed — none of their
       endpoints is deprecated. The 10 `/actions/modules` endpoints are deferred — see §7
-- [x] **`CustomDomain` (9) + `Key` (14)** — `Auth0Ex.Management.CustomDomain` and
-      `Auth0Ex.Management.Key`. Domain registration, DNS verification and default promotion; signing-key
+- [x] **`CustomDomain` (9) + `Key` (14)** — `Auth0Client.Management.CustomDomain` and
+      `Auth0Client.Management.Key`. Domain registration, DNS verification and default promotion; signing-key
       rotation and revocation, encryption keys including bring-your-own-key, and custom signing keys.
       Both groups fully covered
 - [x] **Complete `Client` (14) + `ClientGrant` (6)** — credentials, CIMD registration and connections on
       `Client`; `get/1` and `organizations/2` on `ClientGrant`. Pairs with the §4 `client_credentials/4`
       fix so Private Key JWT works end to end rather than half-built. Both groups fully covered
-- [x] **Complete `Connection` (28)** — `Auth0Ex.Management.Connection` gains per-client enablement,
+- [x] **Complete `Connection` (28)** — `Auth0Client.Management.Connection` gains per-client enablement,
       connection keys and the AD/LDAP status check; `Connection.Scim` (9) and
       `Connection.DirectoryProvisioning` (9) cover inbound and outbound provisioning, including the two
       tenant-level listings that sit under their own OpenAPI tags. Three groups fully covered, and the last
@@ -229,7 +229,7 @@ against itself.
 **Deprioritized as niche:** `experimentation` (23), `verifiable-credentials`, `supplemental-signals`,
 `rate-limit-policies`, `risk-assessments`.
 
-`GET /events` is Server-Sent Events and likely needs transport work in `lib/auth0_ex/api.ex` rather than just
+`GET /events` is Server-Sent Events and likely needs transport work in `lib/auth0_client/api.ex` rather than just
 a new module.
 
 ## 6. Caveats in endpoints that already work
@@ -267,8 +267,8 @@ Raised by a downstream dependency audit of this library (2026-07-21) and still o
 issues; they are the things that bite under load or partial failure.
 
 - [x] **`Parser` discarded response headers**, making `Retry-After` unreachable. Failures are now a single
-      `Auth0Ex.Error` struct carrying `reason`, `status`, `body` and `headers`, with
-      `Auth0Ex.Error.retry_after/1` to read the backoff. This also collapsed the two error shapes into one,
+      `Auth0Client.Error` struct carrying `reason`, `status`, `body` and `headers`, with
+      `Auth0Client.Error.retry_after/1` to read the backoff. This also collapsed the two error shapes into one,
       which was itself a source of `FunctionClauseError` in a consuming app
 - [x] **Token expiry had no skew margin, no single-flight, and no invalidation on 401.** `TokenState` is now
       a GenServer that owns the token: one fetch in flight at a time with all callers waiting on it,
@@ -347,7 +347,7 @@ issues; they are the things that bite under load or partial failure.
     pinning is done, and `cacerts`/`cacertfile` are the *correct* fix for a private CA — rejecting either
     would push people toward the very setting this exists to stop. The error message names `cacertfile`
     for that reason, since people reach for `:verify_none` mostly in ignorance of the alternative.
-  - **Validated on every read of `Auth0Ex.Config.http_opts/0`, not once at boot**, so a runtime
+  - **Validated on every read of `Auth0Client.Config.http_opts/0`, not once at boot**, so a runtime
     `Application.put_env/3` cannot slip past. The traversal is two `Keyword.get/2` calls on a list that is
     usually empty. `connect_options → transport_opts` is the only TLS path Req exposes, so there is one
     spelling to check rather than several.

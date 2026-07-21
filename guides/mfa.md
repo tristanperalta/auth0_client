@@ -4,9 +4,9 @@ MFA spans three modules, and you will usually need all three:
 
 | | |
 |---|---|
-| `Auth0Ex.Management.Guardian` | tenant-wide configuration — which factors exist, how they are delivered |
-| `Auth0Ex.Authentication.Mfa` | the end user's own authenticators, and challenging them at login |
-| `Auth0Ex.Authentication.Token` | exchanging a verified challenge for tokens |
+| `Auth0Client.Management.Guardian` | tenant-wide configuration — which factors exist, how they are delivered |
+| `Auth0Client.Authentication.Mfa` | the end user's own authenticators, and challenging them at login |
+| `Auth0Client.Authentication.Token` | exchanging a verified challenge for tokens |
 
 Assumes you already have a working login — see [Logging users in](login.md).
 
@@ -16,7 +16,7 @@ Auth0 reference: [Guardian](https://auth0.com/docs/api/management/v2/guardian),
 ## Configuring the tenant
 
 ```elixir
-alias Auth0Ex.Management.Guardian
+alias Auth0Client.Management.Guardian
 
 Guardian.factors()
 #=> {:ok, [%{"name" => "otp", "enabled" => false}, ...]}
@@ -47,10 +47,10 @@ Out of band, as an administrator — hand the user the `ticket_url`, or let Auth
   Guardian.create_enrollment_ticket(%{user_id: "auth0|abc123", send_mail: false})
 ```
 
-Or from the user's own session, with `Auth0Ex.Authentication.Mfa`:
+Or from the user's own session, with `Auth0Client.Authentication.Mfa`:
 
 ```elixir
-alias Auth0Ex.Authentication.Mfa
+alias Auth0Client.Authentication.Mfa
 
 Mfa.associate(access_token, %{authenticator_types: ["otp"]})
 Mfa.authenticators(access_token)
@@ -67,8 +67,8 @@ they cannot be retrieved again.
 To inspect or reset enrolment as an administrator:
 
 ```elixir
-Auth0Ex.Management.User.enrollments("auth0|abc123")
-Auth0Ex.Management.User.delete_authenticators("auth0|abc123")
+Auth0Client.Management.User.enrollments("auth0|abc123")
+Auth0Client.Management.User.delete_authenticators("auth0|abc123")
 ```
 
 `enrollments/1` returns the first confirmed enrolment, not every one the user has.
@@ -80,9 +80,9 @@ When the tenant requires MFA, the password grant does not fail — it returns a 
 sees it, so the flow starts from the error:
 
 ```elixir
-alias Auth0Ex.Authentication.{Mfa, Token}
+alias Auth0Client.Authentication.{Mfa, Token}
 
-{:error, %Auth0Ex.Error{body: %{"error" => "mfa_required", "mfa_token" => mfa_token}}} =
+{:error, %Auth0Client.Error{body: %{"error" => "mfa_required", "mfa_token" => mfa_token}}} =
   Token.password(client_id, "user@example.com", password)
 
 # Challenge the user; for an authenticator app this needs no delivery step

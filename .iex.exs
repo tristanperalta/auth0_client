@@ -1,3 +1,3 @@
-alias Auth0Ex.TokenState
-alias Auth0Ex.Management.Client
-alias Auth0Ex.Management.User
+alias Auth0Client.TokenState
+alias Auth0Client.Management.Client
+alias Auth0Client.Management.User
