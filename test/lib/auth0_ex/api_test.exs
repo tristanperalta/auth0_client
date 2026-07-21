@@ -48,12 +48,17 @@ defmodule Auth0Ex.ApiTest do
 
   describe "build_url/2" do
     test "prefixes management paths with the v2 api base" do
-      assert "https://brighterlink.auth0.com/api/v2/clients?" ==
+      assert "https://brighterlink.auth0.com/api/v2/clients" ==
                MgmtEndpoint.build_url("clients", %{})
     end
 
     test "authentication paths hang off the tenant root" do
-      assert "https://brighterlink.auth0.com/userinfo?" == AuthEndpoint.build_url("userinfo", %{})
+      assert "https://brighterlink.auth0.com/userinfo" == AuthEndpoint.build_url("userinfo", %{})
+    end
+
+    test "appends no question mark when there are no params" do
+      refute MgmtEndpoint.build_url("clients", %{}) =~ "?"
+      refute AuthEndpoint.build_url("userinfo", []) =~ "?"
     end
 
     test "encodes query params" do
@@ -72,7 +77,7 @@ defmodule Auth0Ex.ApiTest do
 
   describe "default_params/0" do
     test "is empty by default" do
-      assert "https://brighterlink.auth0.com/api/v2/clients?" ==
+      assert "https://brighterlink.auth0.com/api/v2/clients" ==
                MgmtEndpoint.build_url("clients", %{})
     end
 

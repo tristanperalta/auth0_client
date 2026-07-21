@@ -8,7 +8,14 @@ defmodule Auth0Ex.Management.Log do
   @doc """
   Retrieve the log entries that match the specified criteria
 
+  Auth0 caps this at 100 records per request and 1,000 results overall, so paging
+  past the thousandth entry returns nothing. For more than that, use checkpoint
+  pagination — pass `from` and `take` — or a log stream.
+
+  `include_totals` is deprecated on this endpoint.
+
       iex> Auth0Ex.Management.Log.search(page: 1, fields: "user_name")
+      iex> Auth0Ex.Management.Log.search(q: "type:f", take: 100)
   """
   def search(params) when is_list(params) or is_map(params) do
     do_get(@path, params)

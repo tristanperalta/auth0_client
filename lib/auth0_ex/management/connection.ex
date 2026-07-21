@@ -8,8 +8,12 @@ defmodule Auth0Ex.Management.Connection do
   @doc """
   Gets all the connections
 
+  Past 1,000 connections, offset pagination stops working — use checkpoint
+  pagination instead, passing `from` and `take`.
+
       iex> Auth0Ex.Management.Connection.all()
       iex> Auth0Ex.Management.Connection.all(%{name: "some_name"})
+      iex> Auth0Ex.Management.Connection.all(take: 100)
   """
   def all(params \\ %{}) when is_map(params) or is_list(params) do
     do_get(@path, params)
@@ -39,7 +43,14 @@ defmodule Auth0Ex.Management.Connection do
   @doc """
   Update a connection
 
-      iex> Auth0Ex.Management.Connection.update("some_conn_id", %{name: "new name"})
+  `name` and `strategy` are immutable — Auth0 rejects an attempt to change either,
+  so a connection has to be recreated to rename it.
+
+  `enabled_clients` is superseded by `PATCH /connections/{id}/clients`, which this
+  library does not yet wrap.
+
+      iex> Auth0Ex.Management.Connection.update("some_conn_id", %{display_name: "New name"})
+      iex> Auth0Ex.Management.Connection.update("some_conn_id", %{options: %{brute_force_protection: true}})
   """
   def update(id, body) do
     do_patch("#{@path}/#{id}", body)

@@ -9,8 +9,12 @@ defmodule Auth0Ex.Management.Client do
   @doc """
   Gets all the clients
 
+  Searching with `q` needs checkpoint pagination — pass `from` and `take` rather
+  than `page` — and carries lower rate limits than an unfiltered listing.
+
       iex> Auth0Ex.Management.Client.all()
       iex> Auth0Ex.Management.Client.all(fields: "name,client_id")
+      iex> Auth0Ex.Management.Client.all(q: "name:acme*", take: 50)
   """
   def all(params \\ %{}) when is_map(params) or is_list(params) do
     do_get(@path, params)

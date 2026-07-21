@@ -18,7 +18,14 @@ defmodule Auth0Ex.Management.EmailProvider do
   @doc """
   Configures the email provider
 
-      iex> Auth0Ex.Management.EmailProvider.configure(name: "mandrill", enabled: true)
+  `credentials` is required — the provider's API key or SMTP details, depending on
+  `name`. Without it Auth0 rejects the request.
+
+      iex> Auth0Ex.Management.EmailProvider.configure(%{
+      ...>   name: "mandrill",
+      ...>   enabled: true,
+      ...>   credentials: %{api_key: "..."}
+      ...> })
   """
   def configure(body), do: do_post(@path, body)
 

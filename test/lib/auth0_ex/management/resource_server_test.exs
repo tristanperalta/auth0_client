@@ -4,7 +4,7 @@ defmodule Auth0Ex.Management.ResourceServerTest do
 
   alias Auth0Ex.Management.ResourceServer
 
-  describe "all/0" do
+  describe "all/0,1" do
     test "gets all resource servers" do
       stub_request([%{"identifier" => "https://api.example.com"}])
 
@@ -14,6 +14,26 @@ defmodule Auth0Ex.Management.ResourceServerTest do
       assert request.method == "GET"
       assert request.path == "/api/v2/resource-servers"
       assert request.query_string == ""
+    end
+
+    test "filters by identifiers" do
+      stub_request([])
+      ResourceServer.all(identifiers: "https://api.example.com")
+
+      assert assert_receive_request().query == %{
+               "identifiers" => "https://api.example.com"
+             }
+    end
+
+    test "paginates" do
+      stub_request([])
+      ResourceServer.all(%{page: 0, per_page: 50, include_totals: true})
+
+      assert assert_receive_request().query == %{
+               "page" => "0",
+               "per_page" => "50",
+               "include_totals" => "true"
+             }
     end
   end
 

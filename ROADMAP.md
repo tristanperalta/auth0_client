@@ -21,13 +21,13 @@ Two things that look like evidence and are not:
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 174 | 451 | ~39% |
+| Management v2 | 180 | 451 | ~40% |
 | Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
-Management resource groups: 9 fully covered, 6 partial, 34 with no coverage at all.
+Management resource groups: 12 fully covered, 6 partial, 31 with no coverage at all.
 
-- **Full:** `device-credentials`, `emails`, `jobs`, `logs`, `resource-servers`, `roles`, `tickets`,
-  `user-blocks`, `users`
+- **Full:** `device-credentials`, `emails`, `grants`, `jobs`, `logs`, `resource-servers`, `roles`,
+  `tenants`, `tickets`, `user-blocks`, `users`, `users-by-email`
 - **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `clients` 6/14,
   `connections` 6/28, `client-grants` 4/6
 
@@ -170,8 +170,9 @@ Ordered by value. Counts are endpoints in each group.
       phone, push and Duo provider configuration. Pairs with `User.enrollments/1` and
       `User.delete_authenticators/1`, which previously had no configuration side. The six
       `/guardian/factors/sms/*` endpoints are deprecated and not wrapped — see §7
-- [ ] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — six endpoints total, all common lookups. Best
-      effort-to-value ratio available
+- [x] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — `Auth0Ex.Management.Grant` and
+      `Auth0Ex.Management.Tenant`. `users-by-email` is `User.by_email/2` rather than a one-function module,
+      since that is where a reader looks for it; the group is still fully covered
 - [x] **`Action` (14 of 24)** — `Auth0Ex.Management.Action`. Actions CRUD, deploy, test, versions and
       rollback, executions, triggers and bindings. Closes the gap left by removing `Rule` in §3, ahead of
       that end-of-life date. Actions themselves are current and actively developed — none of their
@@ -193,25 +194,28 @@ a new module.
 
 These are correct but incomplete — worth folding into whichever module you touch next.
 
-- [ ] `ResourceServer.all/0` takes no arguments, so pagination and the `identifiers` filter are unreachable.
-      It is the only list function in the library without params
-- [ ] `Log.search/1` ignores the documented 100-record-per-request cap and the 1,000-result pagination
-      ceiling; `include_totals` is deprecated on `/logs`
+- [x] `ResourceServer.all/1` takes params, so `identifiers` and pagination are reachable
+- [x] `Log.search/1` documents the 100-record cap, the 1,000-result ceiling and the deprecated
+      `include_totals`
 - [x] `User.all/1` — v3 search semantics and the 1,000-record cap are now documented on the function, with
       a pointer to `Job.users_exports/1` for anything larger. `get/2` also accepts a keyword list now,
       matching `all/1`
-- [ ] `Client.all/1` — `q` now requires checkpoint pagination (`from`/`take`) and carries reduced rate limits
-- [ ] `Connection.all/1` — more than 1,000 connections requires checkpoint pagination
-- [ ] `Connection.update/2` — `name` and `strategy` are immutable, so the module's own doc example is
-      invalid; `enabled_clients` is deprecated in favour of `PATCH /connections/{id}/clients`
-- [ ] `UserBlock.get/1` and `get_user_block/1` cannot pass `consider_brute_force_enablement`
-- [ ] `EmailProvider.configure/1` — the doc example omits the now-required `credentials`
+- [x] `Client.all/1` documents that `q` needs checkpoint pagination and carries reduced rate limits
+- [x] `Connection.all/1` documents checkpoint pagination past 1,000 connections
+- [x] `Connection.update/2` — the invalid example is replaced, and the immutability of `name` and
+      `strategy` documented along with the `enabled_clients` replacement
+- [x] `UserBlock.get/2` and `get_user_block/2` accept params, so `consider_brute_force_enablement` is
+      reachable
+- [x] `EmailProvider.configure/1` — the example includes the required `credentials`
 - [x] `User.enrollments/1` — the `@doc` claimed "all Guardain enrollments"; corrected to say Auth0 returns
       only the first confirmed enrollment
 - [x] `Job.send_verification_email/1` — the empty-body default is gone, so a call without `user_id` fails
       to compile rather than at runtime
-- [ ] `Ticket.email_verification/2` silently overrides any `user_id` in the body
-- [ ] `build_url/2` always appends `?` even with no params
+- [x] `Ticket.email_verification/2` — the override is documented rather than changed, since callers may
+      rely on it
+- [x] `build_url/2` appends `?` only when there is a query string. Fixing it surfaced a latent bug:
+      `query_string/1` used `Map.merge`, so calling the public `build_url/2` with a keyword list raised
+      `BadMapError` — it normalises now
 
 ## 7. Reliability and token handling
 

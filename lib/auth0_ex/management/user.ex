@@ -32,6 +32,28 @@ defmodule Auth0Ex.Management.User do
   end
 
   @doc """
+  Finds users by email address.
+
+  This is an exact, case-insensitive match on the identity, and it is usually what
+  you want. `all/1` goes through the v3 search engine instead, which is
+  case-sensitive and caps at 1,000 records — worth avoiding when you simply have an
+  address and want the user.
+
+  Returns a list, because one address can belong to several identities across
+  connections.
+
+      iex> Auth0Ex.Management.User.by_email("someone@example.com")
+      iex> Auth0Ex.Management.User.by_email("someone@example.com", fields: "user_id,email")
+  """
+  def by_email(email, params \\ %{}) when is_binary(email) do
+    # Auth0 puts this on its own top-level path rather than under /users.
+    params
+    |> Enum.into(%{})
+    |> Map.put(:email, email)
+    |> then(&do_get("users-by-email", &1))
+  end
+
+  @doc """
   Gets a specific user record with a given user id
 
       iex> Auth0Ex.Management.User.get("auth0|some_user_id")

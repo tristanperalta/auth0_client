@@ -6,11 +6,18 @@ defmodule Auth0Ex.Management.ResourceServer do
   @path "resource-servers"
 
   @doc """
-  Gets all the resource servers
+  Gets all the resource servers.
 
-      iex> Auth0Ex.Management.ResourceServer.all
+  Filter to specific APIs with `identifiers`; paginate with `page`, `per_page` and
+  `include_totals`.
+
+      iex> Auth0Ex.Management.ResourceServer.all()
+      iex> Auth0Ex.Management.ResourceServer.all(identifiers: "https://api.example.com")
+      iex> Auth0Ex.Management.ResourceServer.all(page: 0, per_page: 50, include_totals: true)
   """
-  def all, do: do_get(@path, %{})
+  def all(params \\ %{}) when is_map(params) or is_list(params) do
+    do_get(@path, params)
+  end
 
   @doc """
   Gets a resource server by ID

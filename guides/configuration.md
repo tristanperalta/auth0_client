@@ -96,6 +96,22 @@ want your own application to be identifiable in Auth0's tenant logs:
 config :auth0_ex, user_agent: "MyApp <https://myapp.example.com>"
 ```
 
+## Tenant settings
+
+The settings above configure this library. The tenant's own settings — friendly name, default audience and
+directory, session lifetimes, hosted pages — live in Auth0 and are read and written through the Management
+API:
+
+```elixir
+Auth0Ex.Management.Tenant.settings()
+Auth0Ex.Management.Tenant.update_settings(%{friendly_name: "Acme"})
+```
+
+> #### Tenant settings affect every application {: .warning}
+>
+> `update_settings/1` takes effect immediately for every login in the tenant. Read `settings/0` first and
+> keep the result so a change can be put back.
+
 ## Request encoding
 
 You do not configure this, but it is worth knowing that the library does not use one encoding everywhere.

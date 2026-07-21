@@ -30,6 +30,19 @@ User.delete("auth0|abc123")
 #=> :ok
 ```
 
+## Finding a user by email
+
+If you have an address and want the user, use `by_email/2` rather than a search:
+
+```elixir
+User.by_email("someone@example.com")
+#=> {:ok, [%{"user_id" => "auth0|abc123", ...}]}
+```
+
+It is an exact, case-insensitive match, and returns a list because one address can belong to several
+identities across connections. `User.all/1` would go through the search engine instead, with the caveats
+below.
+
 ## Searching
 
 `User.all/1` uses the v3 search engine, the only one Auth0 still supports. It differs from v2 in ways that
@@ -63,6 +76,22 @@ User.delete_refresh_tokens("auth0|abc123")
 
 User.revoke_access("auth0|abc123")         # both at once
 ```
+
+### Consent grants
+
+A grant records that a user consented to an application's scopes. Deleting one makes Auth0 prompt for
+consent again and invalidates the refresh tokens issued under it.
+
+```elixir
+alias Auth0Ex.Management.Grant
+
+Grant.all(user_id: "auth0|abc123")
+Grant.delete("cgr_abc123")                 # one application
+Grant.delete_by_user("auth0|abc123")       # every application, all at once
+```
+
+`delete_by_user/1` takes the user id as a query parameter rather than a path segment, which is why it is a
+separate function.
 
 ## Bulk import and export
 

@@ -21,7 +21,12 @@ defmodule Auth0Ex.Api do
 
       @doc false
       def build_url(path, params) do
-        "#{base_url(unquote(opts)[:for])}#{path}?#{query_string(params)}"
+        base = "#{base_url(unquote(opts)[:for])}#{path}"
+
+        case query_string(params) do
+          "" -> base
+          query -> "#{base}?#{query}"
+        end
       end
 
       @doc false
@@ -98,9 +103,11 @@ defmodule Auth0Ex.Api do
         )
       end
 
+      # build_url/2 is public, so params may arrive as a keyword list without having
+      # passed through a do_* helper's normalisation.
       defp query_string(params) do
         default_params()
-        |> Map.merge(params)
+        |> Map.merge(Enum.into(params, %{}))
         |> URI.encode_query()
       end
 

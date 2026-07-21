@@ -15,6 +15,17 @@ defmodule Auth0Ex.Management.UserBlockTest do
       assert request.path == "/api/v2/user-blocks"
       assert request.query == %{"identifier" => "some@example.com"}
     end
+
+    test "passes consider_brute_force_enablement alongside the identifier" do
+      stub_request(%{"blocked_for" => []})
+
+      UserBlock.get("some@example.com", consider_brute_force_enablement: true)
+
+      assert assert_receive_request().query == %{
+               "identifier" => "some@example.com",
+               "consider_brute_force_enablement" => "true"
+             }
+    end
   end
 
   describe "get_user_block/1" do
@@ -28,6 +39,14 @@ defmodule Auth0Ex.Management.UserBlockTest do
       assert request.method == "GET"
       assert request.path == "/api/v2/user-blocks/auth0|234234"
       assert request.query_string == ""
+    end
+
+    test "passes consider_brute_force_enablement" do
+      stub_request(%{"blocked_for" => []})
+
+      UserBlock.get_user_block("auth0|234234", consider_brute_force_enablement: true)
+
+      assert assert_receive_request().query == %{"consider_brute_force_enablement" => "true"}
     end
   end
 

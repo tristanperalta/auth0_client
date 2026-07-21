@@ -9,6 +9,9 @@ defmodule Auth0Ex.Management.Ticket do
   @doc """
   Create an email verification ticket
 
+  The `user_id` passed positionally wins: any `user_id` already in `body` is
+  overwritten with it.
+
       iex> Auth0Ex.Management.Ticket.email_verification("auth0|user_id", %{result_url: "http://myapp.com/callback", ttl_sec: 0})
   """
   def email_verification(user_id, body) do

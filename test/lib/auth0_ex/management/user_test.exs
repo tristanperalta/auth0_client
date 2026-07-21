@@ -45,6 +45,45 @@ defmodule Auth0Ex.Management.UserTest do
     end
   end
 
+  describe "by_email/1,2" do
+    # A different top-level path from every other function in this module.
+    test "hits /users-by-email, not /users" do
+      stub_request([%{"user_id" => "auth0|123", "email" => "someone@example.com"}])
+
+      assert {:ok, [%{"email" => "someone@example.com"}]} =
+               User.by_email("someone@example.com")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users-by-email"
+      refute request.path =~ "/users/"
+    end
+
+    test "always sends the email as a query param" do
+      stub_request([])
+      User.by_email("someone@example.com")
+
+      assert assert_receive_request().query == %{"email" => "someone@example.com"}
+    end
+
+    test "passes through field filtering alongside the email" do
+      stub_request([])
+      User.by_email("someone@example.com", fields: "user_id,email")
+
+      assert assert_receive_request().query == %{
+               "email" => "someone@example.com",
+               "fields" => "user_id,email"
+             }
+    end
+
+    test "sends no search_engine, unlike all/1" do
+      stub_request([])
+      User.by_email("someone@example.com")
+
+      refute Map.has_key?(assert_receive_request().query, "search_engine")
+    end
+  end
+
   describe "get/1,2" do
     test "gets a single user" do
       stub_request(%{"user_id" => "auth0|123"})
