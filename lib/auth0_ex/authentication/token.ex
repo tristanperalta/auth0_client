@@ -150,6 +150,98 @@ defmodule Auth0Ex.Authentication.Token do
     post_form(@revoke_path, payload, [])
   end
 
+  @doc """
+  Completes an MFA login with a one-time code from an authenticator app.
+
+  `mfa_token` comes from the `mfa_required` error the password grant returns;
+  `otp` is the code the user reads off their app.
+
+  https://auth0.com/docs/api/authentication/multi-factor-authentication/verify-mfa-with-otp
+
+      iex> Auth0Ex.Authentication.Token.verify_otp("client_id", "mfa_tok", "123456")
+  """
+  def verify_otp(client_id, mfa_token, otp, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      mfa_token: mfa_token,
+      otp: otp,
+      client_secret: Map.get(opts, :client_secret),
+      grant_type: "http://auth0.com/oauth/grant-type/mfa-otp"
+    }
+    |> post_token()
+  end
+
+  @doc """
+  Completes an MFA login out of band — a push notification, SMS or voice call.
+
+  `oob_code` comes from `Auth0Ex.Authentication.Mfa.challenge/1`. Pass
+  `binding_code` in `opts` when that challenge answered with
+  `binding_method: "prompt"`, which means the user must also type a short code;
+  otherwise omit it.
+
+  https://auth0.com/docs/api/authentication/multi-factor-authentication/verify-with-out-of-band
+
+      iex> Auth0Ex.Authentication.Token.verify_oob("client_id", "mfa_tok", "oob_code")
+      iex> Auth0Ex.Authentication.Token.verify_oob("client_id", "mfa_tok", "oob_code", %{binding_code: "1234"})
+  """
+  def verify_oob(client_id, mfa_token, oob_code, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      mfa_token: mfa_token,
+      oob_code: oob_code,
+      binding_code: Map.get(opts, :binding_code),
+      client_secret: Map.get(opts, :client_secret),
+      grant_type: "http://auth0.com/oauth/grant-type/mfa-oob"
+    }
+    |> post_token()
+  end
+
+  @doc """
+  Completes an MFA login with a recovery code, for a user who has lost their
+  authenticator.
+
+  The response may carry a **new** `recovery_code`. The one just used is spent, so
+  show the replacement to the user and have them store it — dropping it silently
+  leaves them with no way back in.
+
+  https://auth0.com/docs/api/authentication/multi-factor-authentication/verify-with-recovery-code
+
+      iex> Auth0Ex.Authentication.Token.verify_recovery_code("client_id", "mfa_tok", "ABCD1234EFGH")
+  """
+  def verify_recovery_code(client_id, mfa_token, recovery_code, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      mfa_token: mfa_token,
+      recovery_code: recovery_code,
+      client_secret: Map.get(opts, :client_secret),
+      grant_type: "http://auth0.com/oauth/grant-type/mfa-recovery-code"
+    }
+    |> post_token()
+  end
+
+  @doc """
+  Exchanges a passwordless code for tokens.
+
+  Start the flow with `Auth0Ex.Authentication.passwordless_start/1`, then pass the
+  code the user received. `realm` must match the connection used there — `"email"`
+  or `"sms"` — and `username` is the email address or phone number it was sent to.
+
+  https://auth0.com/docs/api/authentication/passwordless/authenticate-user
+
+      iex> Auth0Ex.Authentication.Token.passwordless("client_id", "user@example.com", "123456", "email")
+  """
+  def passwordless(client_id, username, otp, realm, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      username: username,
+      otp: otp,
+      realm: realm,
+      client_secret: Map.get(opts, :client_secret),
+      grant_type: "http://auth0.com/oauth/grant-type/passwordless/otp"
+    }
+    |> post_token()
+  end
+
   defp grant_type_for_realm(nil), do: "password"
   defp grant_type_for_realm(_realm), do: "http://auth0.com/oauth/grant-type/password-realm"
 

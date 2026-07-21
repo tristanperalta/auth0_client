@@ -109,6 +109,11 @@ defmodule Auth0Ex.Api do
         do_delete(path, Enum.into(params, %{}))
       end
 
+      @doc false
+      def do_delete(path, params, extra_headers) when is_list(extra_headers) do
+        do_request(:delete, path, Enum.into(params, %{}), "", extra_headers)
+      end
+
       # Several RBAC endpoints send their payload in the body of a DELETE. Unusual
       # for HTTP, but it is what Auth0 documents. Named apart from do_delete/2 so
       # the body cannot be mistaken for query params.

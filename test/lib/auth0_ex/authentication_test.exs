@@ -110,6 +110,97 @@ defmodule Auth0Ex.AuthenticationTest do
     end
   end
 
+  describe "passwordless_start/1" do
+    test "posts the start request" do
+      stub_request(%{"_id" => "1", "email" => "user@example.com"})
+
+      assert {:ok, %{"_id" => "1"}} =
+               Authentication.passwordless_start(%{
+                 client_id: "a_client_id",
+                 connection: "email",
+                 email: "user@example.com",
+                 send: "code"
+               })
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/passwordless/start"
+
+      assert request.body == %{
+               "client_id" => "a_client_id",
+               "connection" => "email",
+               "email" => "user@example.com",
+               "send" => "code"
+             }
+    end
+
+    test "works for the sms connection" do
+      stub_request(%{})
+
+      Authentication.passwordless_start(%{
+        client_id: "a_client_id",
+        connection: "sms",
+        phone_number: "+15551234567"
+      })
+
+      body = assert_receive_request().body
+      assert body["connection"] == "sms"
+      assert body["phone_number"] == "+15551234567"
+    end
+
+    # authParams is a nested object, which is why this endpoint is JSON rather
+    # than form-encoded like the /oauth/token grants.
+    test "carries a nested authParams through as JSON" do
+      stub_request(%{})
+
+      Authentication.passwordless_start(%{
+        client_id: "a_client_id",
+        connection: "email",
+        email: "user@example.com",
+        authParams: %{scope: "openid profile", state: "opaque"}
+      })
+
+      request = assert_receive_request()
+      assert request.content_type == "application/json"
+
+      assert request.body["authParams"] == %{
+               "scope" => "openid profile",
+               "state" => "opaque"
+             }
+    end
+  end
+
+  describe "discovery" do
+    test "jwks/0 fetches the key set" do
+      stub_request(%{"keys" => []})
+
+      assert {:ok, %{"keys" => []}} = Authentication.jwks()
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/.well-known/jwks.json"
+    end
+
+    test "openid_configuration/0 fetches the discovery document" do
+      stub_request(%{"issuer" => "https://brighterlink.auth0.com/"})
+
+      assert {:ok, %{"issuer" => _}} = Authentication.openid_configuration()
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/.well-known/openid-configuration"
+    end
+
+    test "neither sends an authorization header" do
+      for call <- [&Authentication.jwks/0, &Authentication.openid_configuration/0] do
+        stub_request(%{})
+        call.()
+
+        refute List.keyfind(assert_receive_request().headers, "authorization", 0)
+      end
+    end
+  end
+
   describe "encoding" do
     # Auth0 is split: /oauth/* takes form-encoded bodies, /dbconnections/* takes
     # JSON. These pin the JSON side, because form encoding cannot represent the

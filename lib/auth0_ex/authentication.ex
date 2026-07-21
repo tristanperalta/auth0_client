@@ -71,4 +71,43 @@ defmodule Auth0Ex.Authentication do
   def userinfo(access_token) do
     do_get("userinfo", %{}, [{"Authorization", "Bearer #{access_token}"}])
   end
+
+  @doc """
+  Starts a passwordless login by sending the user a code or a magic link.
+
+  `client_id` and `connection` are required; `connection` is `"email"` or `"sms"`.
+  Supply `email` or `phone_number` to match. `send` chooses `"code"` or `"link"`,
+  defaulting to a link. `authParams` carries `scope`, `state` and friends through to
+  the eventual authorization.
+
+  For a code, finish with `Auth0Ex.Authentication.Token.passwordless/5`. A link
+  needs no second call — the user follows it.
+
+  https://auth0.com/docs/api/authentication/passwordless/get-code-or-link
+
+      iex> Auth0Ex.Authentication.passwordless_start(%{client_id: "a_client_id", connection: "email", email: "user@example.com", send: "code"})
+      iex> Auth0Ex.Authentication.passwordless_start(%{client_id: "a_client_id", connection: "sms", phone_number: "+15551234567"})
+  """
+  def passwordless_start(body) when is_map(body) do
+    do_post("passwordless/start", body)
+  end
+
+  @doc """
+  Fetches the tenant's JSON Web Key Set, for verifying token signatures locally.
+
+  Unauthenticated, and it changes only when keys rotate. Cache it — this library
+  does not, so calling it per request means a network round trip per request.
+
+      iex> Auth0Ex.Authentication.jwks()
+  """
+  def jwks, do: do_get(".well-known/jwks.json", %{})
+
+  @doc """
+  Fetches the tenant's OpenID Connect discovery document.
+
+  Unauthenticated, and effectively static. Cache it, as with `jwks/0`.
+
+      iex> Auth0Ex.Authentication.openid_configuration()
+  """
+  def openid_configuration, do: do_get(".well-known/openid-configuration", %{})
 end

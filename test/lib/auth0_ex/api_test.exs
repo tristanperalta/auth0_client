@@ -13,6 +13,7 @@ defmodule Auth0Ex.ApiTest do
     def patch_it(path, body \\ %{}), do: do_patch(path, body)
     def delete_it(path), do: do_delete(path)
     def delete_it(path, params), do: do_delete(path, params)
+    def delete_it(path, params, headers), do: do_delete(path, params, headers)
   end
 
   defmodule AuthEndpoint do
@@ -23,6 +24,7 @@ defmodule Auth0Ex.ApiTest do
     def get_it(path, params, headers), do: do_get(path, params, headers)
     def post_it(path, body, headers), do: do_post(path, body, headers)
     def post_multipart_it(path, fields), do: do_post_multipart(path, fields)
+    def delete_it(path, params, headers), do: do_delete(path, params, headers)
   end
 
   defmodule DefaultParamsEndpoint do
@@ -212,6 +214,33 @@ defmodule Auth0Ex.ApiTest do
       headers = assert_receive_request().headers
       assert Enum.count(headers, &match?({"authorization", _}, &1)) == 1
       assert {"authorization", "Bearer OVERRIDE"} in headers
+    end
+
+    # do_get/3 and do_post/3 gained extra headers when userinfo needed them;
+    # do_delete only caught up when /mfa/authenticators did.
+    test "do_delete/3 merges extra headers" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      AuthEndpoint.delete_it("mfa/authenticators/totp|1", %{}, [{"Authorization", "Bearer USER"}])
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert {"authorization", "Bearer USER"} in request.headers
+    end
+
+    test "do_delete/3 replaces rather than duplicates the authorization" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      MgmtEndpoint.delete_it("clients/1", %{}, [{"Authorization", "Bearer OVERRIDE"}])
+
+      headers = assert_receive_request().headers
+      assert Enum.count(headers, &match?({"authorization", _}, &1)) == 1
+      assert {"authorization", "Bearer OVERRIDE"} in headers
+    end
+
+    test "do_delete/3 still carries query params" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      MgmtEndpoint.delete_it("clients/1", %{force: true}, [{"Authorization", "Bearer USER"}])
+
+      assert assert_receive_request().query == %{"force" => "true"}
     end
   end
 

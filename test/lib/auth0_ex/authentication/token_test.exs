@@ -2,6 +2,7 @@ defmodule Auth0Ex.Authentication.TokenTest do
   use ExUnit.Case, async: true
   use Auth0Ex.ReqCase
 
+  alias Auth0Ex.Authentication.Mfa
   alias Auth0Ex.Authentication.Token
 
   describe "auth_code/3,4" do
@@ -251,6 +252,161 @@ defmodule Auth0Ex.Authentication.TokenTest do
 
       assert {:error, %Auth0Ex.Error{reason: :bad_request, status: 400}} =
                Token.revoke("an_id", "a_refresh_token")
+    end
+  end
+
+  describe "MFA verify grants" do
+    test "verify_otp/3 sends the mfa-otp grant" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, %{"access_token" => "a_token"}} =
+               Token.verify_otp("an_id", "mfa_tok", "123456")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "mfa_token" => "mfa_tok",
+               "otp" => "123456",
+               "grant_type" => "http://auth0.com/oauth/grant-type/mfa-otp"
+             }
+    end
+
+    test "verify_oob/3 sends the mfa-oob grant and omits binding_code by default" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, _} = Token.verify_oob("an_id", "mfa_tok", "oob_code")
+
+      request = assert_receive_request()
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "mfa_token" => "mfa_tok",
+               "oob_code" => "oob_code",
+               "grant_type" => "http://auth0.com/oauth/grant-type/mfa-oob"
+             }
+
+      refute Map.has_key?(request.body, "binding_code")
+    end
+
+    test "verify_oob/4 sends binding_code when the challenge demanded a prompt" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.verify_oob("an_id", "mfa_tok", "oob_code", %{binding_code: "1234"})
+
+      assert assert_receive_request().body["binding_code"] == "1234"
+    end
+
+    test "verify_recovery_code/3 sends the mfa-recovery-code grant" do
+      stub_request(%{"access_token" => "a_token", "recovery_code" => "NEWCODE"})
+
+      assert {:ok, %{"recovery_code" => "NEWCODE"}} =
+               Token.verify_recovery_code("an_id", "mfa_tok", "OLDCODE")
+
+      request = assert_receive_request()
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "mfa_token" => "mfa_tok",
+               "recovery_code" => "OLDCODE",
+               "grant_type" => "http://auth0.com/oauth/grant-type/mfa-recovery-code"
+             }
+    end
+
+    # Three grants that differ only in their grant_type and one field. A
+    # copy-paste between them would be invisible in review.
+    test "the three grants send three distinct grant types" do
+      calls = [
+        fn -> Token.verify_otp("an_id", "mfa_tok", "123456") end,
+        fn -> Token.verify_oob("an_id", "mfa_tok", "oob_code") end,
+        fn -> Token.verify_recovery_code("an_id", "mfa_tok", "CODE") end
+      ]
+
+      grant_types =
+        for call <- calls do
+          stub_request(%{"access_token" => "a_token"})
+          call.()
+          assert_receive_request().body["grant_type"]
+        end
+
+      assert grant_types == [
+               "http://auth0.com/oauth/grant-type/mfa-otp",
+               "http://auth0.com/oauth/grant-type/mfa-oob",
+               "http://auth0.com/oauth/grant-type/mfa-recovery-code"
+             ]
+
+      assert Enum.uniq(grant_types) == grant_types
+    end
+
+    test "each accepts a client_secret for a confidential client" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.verify_otp("an_id", "mfa_tok", "123456", %{client_secret: "a_secret"})
+
+      assert assert_receive_request().body["client_secret"] == "a_secret"
+    end
+  end
+
+  describe "passwordless/4,5" do
+    test "sends the passwordless otp grant" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, _} = Token.passwordless("an_id", "user@example.com", "123456", "email")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "username" => "user@example.com",
+               "otp" => "123456",
+               "realm" => "email",
+               "grant_type" => "http://auth0.com/oauth/grant-type/passwordless/otp"
+             }
+    end
+
+    test "the username is a phone number when the realm is sms" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.passwordless("an_id", "+15551234567", "123456", "sms")
+
+      body = assert_receive_request().body
+      assert body["username"] == "+15551234567"
+      assert body["realm"] == "sms"
+    end
+  end
+
+  # The individual calls above are each correct; this is the order they go in.
+  describe "the MFA login flow end to end" do
+    test "password grant reports mfa_required, then challenge, then verify" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{"error" => "mfa_required", "mfa_token" => "mfa_tok"})
+      end)
+
+      assert {:error, %Auth0Ex.Error{status: 403, body: body}} =
+               Token.password("an_id", "user@example.com", "pwd")
+
+      assert body["error"] == "mfa_required"
+      mfa_token = body["mfa_token"]
+      assert_receive_request()
+
+      stub_request(%{"challenge_type" => "otp"})
+
+      assert {:ok, %{"challenge_type" => "otp"}} =
+               Mfa.challenge(%{mfa_token: mfa_token, client_id: "an_id"})
+
+      assert assert_receive_request().path == "/mfa/challenge"
+
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, %{"access_token" => "a_token"}} =
+               Token.verify_otp("an_id", mfa_token, "123456")
+
+      assert assert_receive_request().body["mfa_token"] == "mfa_tok"
     end
   end
 

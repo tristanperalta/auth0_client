@@ -22,7 +22,7 @@ Two things that look like evidence and are not:
 | API | Implemented | Total | |
 |---|---|---|---|
 | Management v2 | 174 | 451 | ~39% |
-| Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
+| Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
 Management resource groups: 9 fully covered, 6 partial, 34 with no coverage at all.
 
@@ -57,6 +57,11 @@ parameter shape either.
       other encoding. Needs `Utils.drop_header/2` rather than `merge_headers/2`: Req sets the multipart
       content-type with `put_new_header`, so the default `application/json` would win and the boundary
       would never be sent
+- [x] `do_delete/3` with per-request headers, for `DELETE /mfa/authenticators/{id}`
+- [ ] **The macro's verbs are unevenly featured.** Each capability has been added to one verb at a time as
+      an endpoint demanded it: `do_get`/`do_post` took extra headers first, `do_delete` only later; keyword
+      params were added to `do_get` before `do_delete`. Nothing is broken, but the next verb-shaped gap will
+      surface the same way. Worth one pass to make headers and keyword params uniform across all of them
 
 ## 2. Known-broken
 
@@ -93,8 +98,10 @@ This library does not support endpoints Auth0 has deprecated or retired.
 ## 4. Authentication API
 
 Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userinfo`, `/authorize`,
-`/v2/logout`, `/oidc/logout`, `/oauth/revoke`, and `/oauth/token` with the `authorization_code`, PKCE,
-`client_credentials`, `refresh_token` and `password` / `password-realm` grants.
+`/v2/logout`, `/oidc/logout`, `/oauth/revoke`, `/passwordless/start`, the four `/mfa/*` endpoints,
+`/.well-known/jwks.json`, `/.well-known/openid-configuration`, and `/oauth/token` with the
+`authorization_code`, PKCE, `client_credentials`, `refresh_token`, `password` / `password-realm`,
+`mfa-otp`, `mfa-oob`, `mfa-recovery-code` and `passwordless/otp` grants.
 
 **P0 — done. The authorization-code flow is complete end to end.**
 
@@ -109,12 +116,13 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
       — [docs](https://auth0.com/docs/api/authentication/authorization-code-flow/authorize-application)
 - [x] Logout URL builders — `Url.logout/1` (`/v2/logout`) and `Url.oidc_logout/1` (`/oidc/logout`)
 
-**P1**
+**P1 — done. An MFA login can now be completed end to end.**
 
-- [ ] Passwordless: `POST /passwordless/start`, plus the `passwordless/otp` grant
-- [ ] MFA: `POST /mfa/challenge`, `POST /mfa/associate`, `GET /mfa/authenticators`,
-      `DELETE /mfa/authenticators/{id}`, and the `mfa-otp` / `mfa-oob` / `mfa-recovery-code` grants
-- [ ] JWKS and OIDC discovery: `GET /.well-known/jwks.json`, `GET /.well-known/openid-configuration`
+- [x] Passwordless — `Authentication.passwordless_start/1` and `Token.passwordless/5`
+- [x] MFA — `Auth0Ex.Authentication.Mfa` (`challenge/1`, `associate/2`, `authenticators/1`,
+      `delete_authenticator/2`) plus `Token.verify_otp/4`, `verify_oob/4` and `verify_recovery_code/4`.
+      Closes the gap where `Token.password/4` reported `mfa_required` and nothing could act on it
+- [x] JWKS and OIDC discovery — `Authentication.jwks/0` and `openid_configuration/0`
 
 **P2 and below**
 

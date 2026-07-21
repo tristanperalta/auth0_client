@@ -311,6 +311,74 @@ Url.logout(%{returnTo: "https://app.example.com", client_id: client_id})
 For a public client — a SPA or mobile app with no secret — use PKCE: pass `code_challenge` and
 `code_challenge_method` to `authorize/2`, then `Token.auth_code_pkce(client_id, code, code_verifier)`.
 
+### Completing an MFA login
+
+When the tenant requires MFA, the password grant does not fail — it returns a **403 carrying an
+`mfa_token`**, which you exchange after challenging the user. A caller matching only on `{:ok, _}` never
+sees it, so the flow starts from the error:
+
+```elixir
+alias Auth0Ex.Authentication.{Mfa, Token}
+
+{:error, %Auth0Ex.Error{body: %{"error" => "mfa_required", "mfa_token" => mfa_token}}} =
+  Token.password(client_id, "user@example.com", password)
+
+# Challenge the user; for an authenticator app this needs no delivery step
+{:ok, _} = Mfa.challenge(%{mfa_token: mfa_token, client_id: client_id})
+
+# Exchange the code they read off their app
+{:ok, tokens} = Token.verify_otp(client_id, mfa_token, "123456")
+```
+
+Out-of-band factors — push, SMS, voice — return an `oob_code` from the challenge instead:
+
+```elixir
+{:ok, %{"oob_code" => oob_code, "binding_method" => binding}} =
+  Mfa.challenge(%{mfa_token: mfa_token, client_id: client_id, challenge_type: "oob"})
+
+# binding_method "prompt" means the user must also type a short code
+Token.verify_oob(client_id, mfa_token, oob_code, %{binding_code: "1234"})
+```
+
+A user who has lost their device uses a recovery code. **The response carries a replacement** — the one
+just used is spent, so show the new one or they are locked out next time:
+
+```elixir
+{:ok, %{"recovery_code" => new_code}} =
+  Token.verify_recovery_code(client_id, mfa_token, old_code)
+```
+
+Enrolment and management of a user's own authenticators live on `Mfa` too — `associate/2`,
+`authenticators/1` and `delete_authenticator/2`. The tenant-wide configuration is
+`Auth0Ex.Management.Guardian`.
+
+### Passwordless
+
+```elixir
+Auth0Ex.Authentication.passwordless_start(%{
+  client_id: client_id,
+  connection: "email",
+  email: "user@example.com",
+  send: "code"
+})
+
+Token.passwordless(client_id, "user@example.com", "123456", "email")
+```
+
+Send `send: "link"` instead and the user follows the link; there is no second call.
+
+### Verifying tokens yourself
+
+```elixir
+Auth0Ex.Authentication.jwks()
+Auth0Ex.Authentication.openid_configuration()
+```
+
+Both are unauthenticated and effectively static. Cache them — this library does not, so calling them per
+request costs a round trip per request.
+
+### Direct username and password
+
 Authenticating usernames and passwords directly is also possible, though a redirect to `/authorize` is
 preferred. The grant must be enabled on the application in the Auth0 dashboard:
 
