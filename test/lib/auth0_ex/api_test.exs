@@ -336,8 +336,9 @@ defmodule Auth0Ex.ApiTest do
   end
 
   # A list body is ambiguous — keyword list meant as an object, or a genuine JSON
-  # array. POST and PATCH resolve it one way and PUT the other, because that is
-  # what their callers need. Unifying them would break the two array senders.
+  # array. POST and PATCH resolve a keyword list one way and PUT resolves every list
+  # the other, because that is what their callers need. Unifying them would break the
+  # array senders.
   describe "list bodies" do
     test "do_post and do_patch read a list as a keyword list, sending an object" do
       stub_request(%{})
@@ -347,6 +348,23 @@ defmodule Auth0Ex.ApiTest do
       stub_request(%{})
       MgmtEndpoint.patch_it("things/1", name: "a")
       assert assert_receive_request().body == %{"name" => "a"}
+    end
+
+    # Only a *keyword* list is read as an object. Anything else is a genuine array —
+    # Connection.update_clients/2 sends one through PATCH. This used to raise
+    # ArgumentError, so no caller can have depended on the old behaviour.
+    test "do_post and do_patch send a non-keyword list as a JSON array" do
+      stub_request(%{})
+      MgmtEndpoint.post_it("things", [%{client_id: "a", status: true}])
+      assert assert_receive_request().body == [%{"client_id" => "a", "status" => true}]
+
+      stub_request(%{})
+      MgmtEndpoint.patch_it("things/1", [%{client_id: "a", status: false}])
+      assert assert_receive_request().body == [%{"client_id" => "a", "status" => false}]
+
+      stub_request(%{})
+      MgmtEndpoint.post_it("things", ["read:users", "write:users"])
+      assert assert_receive_request().body == ["read:users", "write:users"]
     end
 
     test "do_put sends a list as a JSON array" do

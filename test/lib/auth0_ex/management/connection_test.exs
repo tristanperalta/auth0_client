@@ -123,4 +123,112 @@ defmodule Auth0Ex.Management.ConnectionTest do
       assert request.query == %{"email" => "samar@example.com"}
     end
   end
+
+  describe "clients/2" do
+    test "lists the clients with this connection enabled" do
+      stub_request(%{"clients" => [%{"client_id" => "abc123"}]})
+
+      assert {:ok, %{"clients" => _}} = Connection.clients("con_123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/connections/con_123/clients"
+      assert request.query_string == ""
+    end
+
+    test "supports checkpoint pagination" do
+      stub_request(%{})
+      Connection.clients("con_123", from: "abc", take: 50)
+
+      assert assert_receive_request().query == %{"from" => "abc", "take" => "50"}
+    end
+  end
+
+  describe "update_clients/2" do
+    # The body is a JSON array, not an object. do_patch reads a *keyword* list as an
+    # object, so a list of maps has to survive untouched — it used to raise.
+    test "sends an array of client statuses and returns :ok on 204" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok =
+               Connection.update_clients("con_123", [
+                 %{client_id: "abc123", status: true},
+                 %{client_id: "def456", status: false}
+               ])
+
+      request = assert_receive_request()
+      assert request.method == "PATCH"
+      assert request.path == "/api/v2/connections/con_123/clients"
+
+      assert request.body == [
+               %{"client_id" => "abc123", "status" => true},
+               %{"client_id" => "def456", "status" => false}
+             ]
+    end
+  end
+
+  describe "connection keys" do
+    test "keys/1 gets them" do
+      stub_request([%{"kid" => "abc"}])
+
+      assert {:ok, [%{"kid" => "abc"}]} = Connection.keys("con_123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/connections/con_123/keys"
+    end
+
+    test "create_keys/2 posts and accepts a 201" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(201, ~s({"kid":"abc"}))
+      end)
+
+      assert {:ok, %{"kid" => "abc"}} = Connection.create_keys("con_123", %{signing_alg: "RS256"})
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/connections/con_123/keys"
+      assert request.body == %{"signing_alg" => "RS256"}
+    end
+
+    test "rotate_keys/2 posts to the rotate path" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(201, ~s({"kid":"def"}))
+      end)
+
+      assert {:ok, %{"kid" => "def"}} = Connection.rotate_keys("con_123")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/connections/con_123/keys/rotate"
+    end
+  end
+
+  describe "status/1" do
+    test "an online connection answers 200" do
+      stub_request(%{})
+
+      assert {:ok, %{}} = Connection.status("con_123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/connections/con_123/status"
+    end
+
+    # Auth0 reports "offline" as a 404, so it arrives as an error like any other 404.
+    # Documented on the function rather than translated into a boolean.
+    test "an offline connection surfaces as a 404 error" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(404, ~s({"error":"Not Found"}))
+      end)
+
+      assert {:error, %Auth0Ex.Error{status: 404}} = Connection.status("con_123")
+    end
+  end
 end

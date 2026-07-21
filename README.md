@@ -61,6 +61,7 @@ The Authentication API lives under `Auth0Ex.Authentication`.
 | [Roles and permissions](guides/rbac.md) | RBAC, and tracing where a user's access came from |
 | [Organizations](guides/organizations.md) | B2B — members, org-scoped roles, invitations |
 | [Applications and credentials](guides/applications.md) | Clients, Private Key JWT, client grants |
+| [Connections and provisioning](guides/connections.md) | Identity providers, SCIM, directory sync |
 | [Actions](guides/actions.md) | Extending the login flow |
 | [Custom domains and keys](guides/domains-and-keys.md) | Branded login domains, signing-key rotation |
 | [Error handling](guides/error-handling.md) | Return shapes, `Auth0Ex.Error`, rate limiting |

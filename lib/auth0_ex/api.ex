@@ -87,11 +87,14 @@ defmodule Auth0Ex.Api do
       end
 
       # A list body is ambiguous: it may be a keyword list meant as a JSON object,
-      # or a genuine JSON array. POST and PATCH resolve it as a keyword list, since
-      # that is what their callers pass. PUT does not — it is how this library sends
-      # an array, and converting one here would raise.
-      defp keyword_to_object(body) when is_list(body), do: Enum.into(body, %{})
-      defp keyword_to_object(body), do: body
+      # or a genuine JSON array. POST and PATCH resolve a *keyword* list as an object,
+      # since that is what most of their callers pass, and leave any other list alone
+      # so it is sent as an array — Connection.update_clients/2 needs one. PUT converts
+      # nothing at all; it is how this library sends an array from a caller that could
+      # just as well have passed a keyword list.
+      defp keyword_to_object(body) do
+        if Keyword.keyword?(body), do: Map.new(body), else: body
+      end
 
       defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do
         Auth0Ex.Api.request(

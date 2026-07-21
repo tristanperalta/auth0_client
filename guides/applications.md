@@ -26,6 +26,10 @@ Client.rotate_secret("abc123")
 Searching with `q` needs checkpoint pagination — `from` and `take` rather than `page` — and carries lower
 rate limits.
 
+`Client.connections/2` reads the application-to-connection relationship from one side;
+`Auth0Ex.Management.Connection.clients/2` reads it from the other, and `update_clients/2` is how you change
+it. See [Connections](connections.md).
+
 ## Private Key JWT and mTLS
 
 Instead of a shared client secret, an application can authenticate with a key it holds privately. That is

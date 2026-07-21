@@ -21,15 +21,17 @@ Two things that look like evidence and are not:
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 213 | 451 | ~47% |
+| Management v2 | 237 | 451 | ~53% |
 | Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
-Management resource groups: 16 fully covered, 4 partial, 29 with no coverage at all.
+Management resource groups: 19 fully covered, 3 partial, 27 with no coverage at all.
 
-- **Full:** `client-grants`, `clients`, `custom-domains`, `device-credentials`, `emails`, `grants`,
+- **Full:** `client-grants`, `clients`, `connections`, `connections-directory-provisionings`,
+  `connections-scim-configurations`, `custom-domains`, `device-credentials`, `emails`, `grants`,
   `jobs`, `keys`, `logs`, `resource-servers`, `roles`, `tenants`, `tickets`, `user-blocks`, `users`,
   `users-by-email`
-- **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `connections` 6/28
+- **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24 — all three partial by the
+  decisions recorded in §7, not for want of work
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
 RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
@@ -187,12 +189,20 @@ Ordered by value. Counts are endpoints in each group.
       `Auth0Ex.Management.Key`. Domain registration, DNS verification and default promotion; signing-key
       rotation and revocation, encryption keys including bring-your-own-key, and custom signing keys.
       Both groups fully covered
+- [x] **Complete `Client` (14) + `ClientGrant` (6)** — credentials, CIMD registration and connections on
+      `Client`; `get/1` and `organizations/2` on `ClientGrant`. Pairs with the §4 `client_credentials/4`
+      fix so Private Key JWT works end to end rather than half-built. Both groups fully covered
+- [x] **Complete `Connection` (28)** — `Auth0Ex.Management.Connection` gains per-client enablement,
+      connection keys and the AD/LDAP status check; `Connection.Scim` (9) and
+      `Connection.DirectoryProvisioning` (9) cover inbound and outbound provisioning, including the two
+      tenant-level listings that sit under their own OpenAPI tags. Three groups fully covered, and the last
+      core resource that was partial for want of work
 
 **§5's ordered list is complete.** What remains is the next tier below, which has never been ranked
 against itself.
 
-**Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12), client credentials on `Client`
-(5), `Session` (4), `RefreshToken` (5), `Prompt`, `Branding` (23), `NetworkAcl`, `Flow`, `Form`.
+**Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12), `Session` (4),
+`RefreshToken` (5), `Prompt`, `Branding` (23), `NetworkAcl`, `Flow`, `Form`.
 
 **Will not support:** `hooks` (9) and `rules-configs` (3) — both legacy, superseded by Actions.
 
@@ -215,7 +225,9 @@ These are correct but incomplete — worth folding into whichever module you tou
 - [x] `Client.all/1` documents that `q` needs checkpoint pagination and carries reduced rate limits
 - [x] `Connection.all/1` documents checkpoint pagination past 1,000 connections
 - [x] `Connection.update/2` — the invalid example is replaced, and the immutability of `name` and
-      `strategy` documented along with the `enabled_clients` replacement
+      `strategy` documented. The `enabled_clients` replacement it pointed at now exists:
+      `Connection.update_clients/2`, which changes one client at a time rather than replacing the list and
+      racing anyone else editing the connection
 - [x] `UserBlock.get/2` and `get_user_block/2` accept params, so `consider_brute_force_enablement` is
       reachable
 - [x] `EmailProvider.configure/1` — the example includes the required `credentials`
@@ -269,10 +281,16 @@ issues; they are the things that bite under load or partial failure.
   This is why `organizations` reads 37/42 rather than fully covered — it is a choice, not a gap.
 - **Some endpoints take a request body on `DELETE`.** Unusual, but documented — the RBAC remove operations
   work this way. `do_delete_body/3` exists for exactly those; `do_delete/3` still means query params.
-- **`do_put` sends a list as a JSON array; `do_post` and `do_patch` read one as a keyword list.** Not an
-  oversight — a list body is ambiguous and each verb resolves it the way its callers need.
+- **`do_put` sends a list as a JSON array; `do_post` and `do_patch` read a *keyword* list as an object.**
+  Not an oversight — a list body is ambiguous and each verb resolves it the way its callers need.
   `User.replace_authentication_methods/2` and `Guardian.update_policies/1` depend on the PUT behaviour, and
   converting a list there raises `ArgumentError`. Do not "unify" these either.
+
+  Refined once, when `Connection.update_clients/2` needed to PATCH a JSON array: `keyword_to_object/1`
+  now tests `Keyword.keyword?/1` rather than `is_list/1`, so a non-keyword list passes through to POST and
+  PATCH as an array instead of raising `ArgumentError` on `Enum.into/2`. That is not the unification this
+  note forbids — keyword lists still become objects, `do_put` is untouched, and the old behaviour on a
+  non-keyword list was a crash, so nothing could depend on it.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
   `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
   `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding
