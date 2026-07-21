@@ -25,42 +25,20 @@ defmodule Auth0Ex.Api do
       end
 
       @doc false
-      def do_get(path, params) when is_map(params) do
-        do_request(:get, path, params, "")
-      end
-
-      @doc false
-      def do_get(path, params) when is_list(params) do
-        do_get(path, Enum.into(params, %{}))
-      end
-
-      @doc false
-      def do_get(path, params, extra_headers) when is_list(extra_headers) do
+      def do_get(path, params \\ %{}, extra_headers \\ []) do
         do_request(:get, path, Enum.into(params, %{}), "", extra_headers)
       end
 
-      def do_post(path, body \\ %{})
-
       @doc false
-      def do_post(path, body) when is_list(body) do
-        do_post(path, Enum.into(body, %{}))
-      end
-
-      @doc false
-      def do_post(path, body) do
-        do_request(:post, path, %{}, Jason.encode!(body))
-      end
-
-      @doc false
-      def do_post(path, body, extra_headers) when is_list(extra_headers) do
-        do_request(:post, path, %{}, Jason.encode!(body), extra_headers)
+      def do_post(path, body \\ %{}, extra_headers \\ []) do
+        do_request(:post, path, %{}, Jason.encode!(keyword_to_object(body)), extra_headers)
       end
 
       # File uploads. Field names must be atoms and values binary, iodata, integer
       # or a File.Stream — Req has no clause for anything else, including booleans.
       @doc false
-      def do_post_multipart(path, fields) do
-        do_request(:post, path, %{}, {:form_multipart, fields})
+      def do_post_multipart(path, fields, extra_headers \\ []) do
+        do_request(:post, path, %{}, {:form_multipart, fields}, extra_headers)
       end
 
       # OAuth 2.0 (RFC 6749) specifies a form-encoded body for the token endpoints,
@@ -77,40 +55,21 @@ defmodule Auth0Ex.Api do
         )
       end
 
+      # Deliberately does NOT convert a list body. PUT is how this library sends a
+      # bare JSON array — User.replace_authentication_methods/2 and
+      # Guardian.update_policies/1 both need one — so a list here stays a list.
       @doc false
-      def do_put(path, body \\ %{}) do
-        do_request(:put, path, %{}, Jason.encode!(body))
-      end
-
-      def do_patch(path, body \\ %{})
-
-      @doc false
-      def do_patch(path, body) when is_list(body) do
-        do_patch(path, Enum.into(body, %{}))
+      def do_put(path, body \\ %{}, extra_headers \\ []) do
+        do_request(:put, path, %{}, Jason.encode!(body), extra_headers)
       end
 
       @doc false
-      def do_patch(path, body) do
-        do_request(:patch, path, %{}, Jason.encode!(body))
+      def do_patch(path, body \\ %{}, extra_headers \\ []) do
+        do_request(:patch, path, %{}, Jason.encode!(keyword_to_object(body)), extra_headers)
       end
 
       @doc false
-      def do_delete(path) do
-        do_request(:delete, path)
-      end
-
-      @doc false
-      def do_delete(path, params) when is_map(params) do
-        do_request(:delete, path, params)
-      end
-
-      @doc false
-      def do_delete(path, params) when is_list(params) do
-        do_delete(path, Enum.into(params, %{}))
-      end
-
-      @doc false
-      def do_delete(path, params, extra_headers) when is_list(extra_headers) do
+      def do_delete(path, params \\ %{}, extra_headers \\ []) do
         do_request(:delete, path, Enum.into(params, %{}), "", extra_headers)
       end
 
@@ -118,9 +77,16 @@ defmodule Auth0Ex.Api do
       # for HTTP, but it is what Auth0 documents. Named apart from do_delete/2 so
       # the body cannot be mistaken for query params.
       @doc false
-      def do_delete_body(path, body) do
-        do_request(:delete, path, %{}, Jason.encode!(body))
+      def do_delete_body(path, body, extra_headers \\ []) do
+        do_request(:delete, path, %{}, Jason.encode!(body), extra_headers)
       end
+
+      # A list body is ambiguous: it may be a keyword list meant as a JSON object,
+      # or a genuine JSON array. POST and PATCH resolve it as a keyword list, since
+      # that is what their callers pass. PUT does not — it is how this library sends
+      # an array, and converting one here would raise.
+      defp keyword_to_object(body) when is_list(body), do: Enum.into(body, %{})
+      defp keyword_to_object(body), do: body
 
       defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do
         Auth0Ex.Api.request(

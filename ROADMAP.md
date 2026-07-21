@@ -58,10 +58,20 @@ parameter shape either.
       content-type with `put_new_header`, so the default `application/json` would win and the boundary
       would never be sent
 - [x] `do_delete/3` with per-request headers, for `DELETE /mfa/authenticators/{id}`
-- [ ] **The macro's verbs are unevenly featured.** Each capability has been added to one verb at a time as
-      an endpoint demanded it: `do_get`/`do_post` took extra headers first, `do_delete` only later; keyword
-      params were added to `do_get` before `do_delete`. Nothing is broken, but the next verb-shaped gap will
-      surface the same way. Worth one pass to make headers and keyword params uniform across all of them
+- [x] **Every verb takes extra headers.** They had been added one verb at a time as endpoints demanded
+      them, which is how `do_delete` came to lack them until `/mfa/authenticators` needed one. All eight now
+      share the shape `(path, payload_or_params \\ default, extra_headers \\ [])`, and a test asserts each
+      one both passes the header through and lets it replace the management token rather than duplicate it.
+      Collapsing the `is_map`/`is_list` clause pairs into `Enum.into/2` and one `keyword_to_object/1` helper
+      shrank the code generated into all fifteen API modules
+
+      **Not unified: list bodies.** The original note here proposed making keyword-param handling uniform
+      too. That would have been wrong. A list body is genuinely ambiguous — a keyword list meant as a JSON
+      object, or a real JSON array — and the split is load-bearing, not accidental: `do_post` and
+      `do_patch` resolve it as a keyword list, while `do_put` leaves it alone because it is how
+      `User.replace_authentication_methods/2` and `Guardian.update_policies/1` send arrays. Unifying them
+      raises `ArgumentError` on both. The asymmetry is now named by `keyword_to_object/1`, commented where
+      it matters, and pinned by tests
 
 ## 2. Known-broken
 
@@ -242,7 +252,11 @@ issues; they are the things that bite under load or partial failure.
   `is_enabled`). Wrapping both would ship two near-identical function families and make callers guess.
   This is why `organizations` reads 37/42 rather than fully covered — it is a choice, not a gap.
 - **Some endpoints take a request body on `DELETE`.** Unusual, but documented — the RBAC remove operations
-  work this way. `do_delete_body/2` exists for exactly those; `do_delete/2` still means query params.
+  work this way. `do_delete_body/3` exists for exactly those; `do_delete/3` still means query params.
+- **`do_put` sends a list as a JSON array; `do_post` and `do_patch` read one as a keyword list.** Not an
+  oversight — a list body is ambiguous and each verb resolves it the way its callers need.
+  `User.replace_authentication_methods/2` and `Guardian.update_policies/1` depend on the PUT behaviour, and
+  converting a list there raises `ArgumentError`. Do not "unify" these either.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
   `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
   `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding

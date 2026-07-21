@@ -14,6 +14,16 @@ defmodule Auth0Ex.ApiTest do
     def delete_it(path), do: do_delete(path)
     def delete_it(path, params), do: do_delete(path, params)
     def delete_it(path, params, headers), do: do_delete(path, params, headers)
+
+    # Every verb, called with a third argument of extra headers.
+    def with_headers(:get, path, headers), do: do_get(path, %{}, headers)
+    def with_headers(:post, path, headers), do: do_post(path, %{}, headers)
+    def with_headers(:put, path, headers), do: do_put(path, %{}, headers)
+    def with_headers(:patch, path, headers), do: do_patch(path, %{}, headers)
+    def with_headers(:delete, path, headers), do: do_delete(path, %{}, headers)
+    def with_headers(:delete_body, path, headers), do: do_delete_body(path, %{}, headers)
+    def with_headers(:post_form, path, headers), do: do_post_form(path, %{}, headers)
+    def with_headers(:post_multipart, path, headers), do: do_post_multipart(path, [], headers)
   end
 
   defmodule AuthEndpoint do
@@ -285,6 +295,84 @@ defmodule Auth0Ex.ApiTest do
       assert body =~ "first"
       assert body =~ ~s(name="two")
       assert body =~ "second"
+    end
+  end
+
+  # Extra headers were bolted onto one verb at a time as endpoints demanded them,
+  # which is how do_delete came to lack them until /mfa/authenticators needed one.
+  # These assert every verb supports them, so the next gap fails here rather than
+  # against a live tenant.
+  describe "every verb accepts extra headers" do
+    @verbs [:get, :post, :put, :patch, :delete, :delete_body, :post_form, :post_multipart]
+
+    test "the header reaches the request" do
+      for verb <- @verbs do
+        stub_request(%{})
+        MgmtEndpoint.with_headers(verb, "things", [{"X-Custom", "value"}])
+
+        headers = assert_receive_request().headers
+        assert {"x-custom", "value"} in headers, "#{verb} dropped the extra header"
+      end
+    end
+
+    test "an extra authorization replaces the management token rather than duplicating it" do
+      for verb <- @verbs do
+        stub_request(%{})
+        MgmtEndpoint.with_headers(verb, "things", [{"Authorization", "Bearer OVERRIDE"}])
+
+        headers = assert_receive_request().headers
+
+        assert Enum.count(headers, &match?({"authorization", _}, &1)) == 1,
+               "#{verb} sent more than one authorization header"
+
+        assert {"authorization", "Bearer OVERRIDE"} in headers
+      end
+    end
+  end
+
+  # A list body is ambiguous — keyword list meant as an object, or a genuine JSON
+  # array. POST and PATCH resolve it one way and PUT the other, because that is
+  # what their callers need. Unifying them would break the two array senders.
+  describe "list bodies" do
+    test "do_post and do_patch read a list as a keyword list, sending an object" do
+      stub_request(%{})
+      MgmtEndpoint.post_it("things", name: "a", value: "b")
+      assert assert_receive_request().body == %{"name" => "a", "value" => "b"}
+
+      stub_request(%{})
+      MgmtEndpoint.patch_it("things/1", name: "a")
+      assert assert_receive_request().body == %{"name" => "a"}
+    end
+
+    test "do_put sends a list as a JSON array" do
+      stub_request(%{})
+      MgmtEndpoint.put_it("things", ["all-applications"])
+
+      body = assert_receive_request().body
+      assert body == ["all-applications"]
+      assert is_list(body)
+    end
+
+    test "do_put sends a list of objects as an array of objects" do
+      stub_request(%{})
+      MgmtEndpoint.put_it("things", [%{type: "email"}, %{type: "otp"}])
+
+      assert assert_receive_request().body == [%{"type" => "email"}, %{"type" => "otp"}]
+    end
+
+    test "a map body is untouched by any of them" do
+      for {call, verb} <- [
+            {&MgmtEndpoint.post_it/2, "POST"},
+            {&MgmtEndpoint.put_it/2, "PUT"},
+            {&MgmtEndpoint.patch_it/2, "PATCH"}
+          ] do
+        stub_request(%{})
+        call.("things", %{name: "a"})
+
+        request = assert_receive_request()
+        assert request.method == verb
+        assert request.body == %{"name" => "a"}
+      end
     end
   end
 
