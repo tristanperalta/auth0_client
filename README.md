@@ -109,6 +109,56 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 Available resources: `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`, `Job`,
 `Log`, `ResourceServer`, `Ticket`, `User`, `UserBlock`.
 
+### Logging a user in
+
+`/authorize` and the logout endpoints are browser redirects, not API calls, so `Auth0Ex.Authentication.Url`
+builds URLs for you to redirect to rather than requesting them itself.
+
+```elixir
+alias Auth0Ex.Authentication.{Token, Url}
+
+# 1. send the browser to Auth0
+Url.authorize(client_id, %{
+  redirect_uri: "https://app.example.com/callback",
+  scope: "openid profile email",
+  state: state
+})
+#=> "https://your-tenant.auth0.com/authorize?client_id=…&response_type=code&…"
+
+# 2. Auth0 redirects back with ?code=… — exchange it
+Token.auth_code(client_id, client_secret, code, "https://app.example.com/callback")
+#=> {:ok, %{"access_token" => …, "refresh_token" => …, "id_token" => …}}
+
+# 3. later, swap the refresh token for a fresh access token
+Token.refresh(client_id, refresh_token, %{client_secret: client_secret})
+
+# 4. log out — again a redirect
+Url.logout(%{returnTo: "https://app.example.com", client_id: client_id})
+```
+
+For a public client — a SPA or mobile app with no secret — use PKCE: pass `code_challenge` and
+`code_challenge_method` to `authorize/2`, then `Token.auth_code_pkce(client_id, code, code_verifier)`.
+
+Authenticating usernames and passwords directly is also possible, though a redirect to `/authorize` is
+preferred. The grant must be enabled on the application in the Auth0 dashboard:
+
+```elixir
+Token.password(client_id, "user@example.com", password, %{
+  realm: "Username-Password-Authentication",
+  forwarded_for: client_ip
+})
+```
+
+Pass `forwarded_for`. Without it Auth0's brute-force protection sees only your server's address, so every
+failed login in your tenant looks like it came from one place.
+
+To revoke a refresh token:
+
+```elixir
+Token.revoke(client_id, refresh_token)
+#=> :ok
+```
+
 ### Authentication API
 
 These call the tenant root rather than `/api/v2`, and send no management token.
@@ -127,29 +177,55 @@ Auth0Ex.Authentication.change_password(client_id, "someone@example.com", "Userna
 Auth0Ex.Authentication.userinfo(access_token)
 #=> {:ok, %{"sub" => "auth0|abc123", "email" => "someone@example.com"}}
 
+# Machine-to-machine, no user involved
 Auth0Ex.Authentication.Token.client_credentials(client_id, client_secret, "https://your-api/")
-
-Auth0Ex.Authentication.Token.auth_code(client_id, client_secret, code, redirect_uri)
-
-# PKCE, for public clients that have no secret
-Auth0Ex.Authentication.Token.auth_code_pkce(client_id, code, code_verifier)
 ```
+
+Request bodies follow each endpoint's own documentation: the `/oauth/*` token endpoints are
+form-encoded, as OAuth 2.0 and Auth0 specify, and `/dbconnections/*` is JSON.
 
 ## Error handling
 
 Every API function returns one of:
 
 ```elixir
-{:ok, body}                      # 200/201, body decoded from JSON
-:ok                              # 204 No Content
-{:error, body, status_code}      # any other status, body decoded
-{:error, %{reason: reason}}      # transport failure, or no management token
+{:ok, body}                  # 200/201, body decoded from JSON
+:ok                          # 204 No Content, and a successful token revocation
+{:error, %Auth0Ex.Error{}}   # everything else
 ```
 
-A Management call needs a token before it can be made. When one cannot be obtained — bad credentials, a
-rate-limited tenant, an unreachable network — the call returns `{:error, %{reason: reason}}` and never
-reaches the endpoint you asked for. `reason` is one of `:token_fetch_failed` (carrying `:status` and
-`:body`), `:missing_access_token`, `:malformed_token`, or the underlying transport reason.
+Auth0 fails in three unrelated ways — it answers with an error status, the request never reaches it, or no
+management token can be obtained — and all three arrive as one struct, so you need one clause rather than
+three:
+
+```elixir
+case Auth0Ex.Management.User.get(user_id) do
+  {:ok, user} -> user
+  {:error, %Auth0Ex.Error{reason: :not_found}} -> nil
+  {:error, %Auth0Ex.Error{} = error} -> raise error
+end
+```
+
+`Auth0Ex.Error` carries:
+
+| Field | |
+|---|---|
+| `reason` | An atom, always present. `:bad_request`, `:unauthorized`, `:forbidden`, `:not_found`, `:conflict`, `:rate_limited`, `:server_error`, `:http_error`; a transport reason such as `:timeout`; or a token failure — `:token_fetch_failed`, `:missing_access_token`, `:malformed_token` |
+| `status` | The HTTP status, or `nil` if the request never got one |
+| `body` | The decoded response body |
+| `headers` | The response headers |
+
+It is an exception, so `raise error` works when you would rather not handle the failure.
+
+Because headers are kept, you can honour Auth0's rate limiting rather than guessing:
+
+```elixir
+{:error, %Auth0Ex.Error{reason: :rate_limited} = error} ->
+  Process.sleep((Auth0Ex.Error.retry_after(error) || 1) * 1000)
+```
+
+A Management call needs a token before it can be made. When one cannot be obtained, the call returns an
+error and never reaches the endpoint you asked for.
 
 ## API coverage
 

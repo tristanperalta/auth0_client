@@ -9,13 +9,8 @@ defmodule Auth0Ex.Utils do
   """
   alias Auth0Ex.Authentication.Token
   alias Auth0Ex.Config
+  alias Auth0Ex.Error
   alias Auth0Ex.TokenState
-
-  @type reason :: %{
-          required(:reason) => atom,
-          optional(:status) => integer,
-          optional(:body) => term
-        }
 
   def base_url do
     "https://#{Config.domain()}/"
@@ -39,7 +34,7 @@ defmodule Auth0Ex.Utils do
   Management requests carry a bearer token, so this returns `{:error, reason}` if
   no token can be obtained.
   """
-  @spec request_headers(atom, list) :: {:ok, list} | {:error, reason}
+  @spec request_headers(atom, list) :: {:ok, list} | {:error, Error.t()}
   def request_headers(tag, extra \\ [])
 
   def request_headers(:mgmt, extra) do
@@ -68,7 +63,7 @@ defmodule Auth0Ex.Utils do
   @doc """
   Returns the management API token, fetching and caching one if needed.
   """
-  @spec mgmt_token() :: {:ok, String.t()} | {:error, reason}
+  @spec mgmt_token() :: {:ok, String.t()} | {:error, Error.t()}
   def mgmt_token do
     case Config.mgmt_token() do
       token when is_binary(token) -> {:ok, token}
@@ -99,13 +94,17 @@ defmodule Auth0Ex.Utils do
         cache_token(token)
 
       {:ok, body} ->
-        {:error, %{reason: :missing_access_token, body: body}}
+        {:error, Error.from_reason(:missing_access_token, body: body)}
 
-      {:error, body, status} ->
-        {:error, %{reason: :token_fetch_failed, status: status, body: body}}
+      # Never reached Auth0. The transport reason is more informative than
+      # :token_fetch_failed, so keep it.
+      {:error, %Error{status: nil} = error} ->
+        {:error, error}
 
-      {:error, %{reason: _} = reason} ->
-        {:error, reason}
+      # Auth0 answered, but refused. Keep its status, body and headers — a 429 here
+      # carries the Retry-After a caller needs just as much as a failed API call does.
+      {:error, %Error{} = error} ->
+        {:error, %{error | reason: :token_fetch_failed}}
     end
   end
 
@@ -117,7 +116,7 @@ defmodule Auth0Ex.Utils do
         {:ok, token}
 
       :error ->
-        {:error, %{reason: :malformed_token}}
+        {:error, Error.from_reason(:malformed_token)}
     end
   end
 

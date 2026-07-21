@@ -14,7 +14,7 @@ Management API index. Absence from the OpenAPI document and from the resource na
 | API | Implemented | Total | |
 |---|---|---|---|
 | Management v2 | 50 | 451 | ~11% |
-| Authentication | 3 | ~30 | plus 3 of ~11 `/oauth/token` grants |
+| Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
 Management resource groups: 6 fully covered, 5 partial, 38 with no coverage at all.
 
@@ -38,11 +38,11 @@ parameter shape either.
       to payloads this library constructs with optional defaults (`Token.auth_code/4`,
       `auth_code_pkce/4`). A blanket transform in `do_post`/`do_patch` would break Management PATCH calls,
       where an explicit `null` is how you *clear* a field
-- [ ] Optional form-encoded bodies for `/oauth/token`. Auth0's samples use
-      `application/x-www-form-urlencoded`; the library always sends JSON. Auth0 appears to accept JSON, so
-      this is a risk to close, not a known break
-- [ ] URL-only builders for endpoints that are browser redirects rather than calls the library should make
-      (`/authorize`, logout) — belongs with the P0 work in §4
+- [x] Form-encoded bodies where Auth0 documents them. `do_post_form/3` sends `/oauth/token` and
+      `/oauth/revoke` as `application/x-www-form-urlencoded`, per RFC 6749 and Auth0's docs.
+      `/dbconnections/*` stays JSON — see the encoding rule in §7
+- [x] URL-only builders for endpoints that are browser redirects rather than calls the library should
+      make — `Auth0Ex.Authentication.Url`
 
 ## 2. Known-broken
 
@@ -78,17 +78,22 @@ This library does not support endpoints Auth0 has deprecated or retired.
 
 ## 4. Authentication API
 
-The library implements 3 of ~11 `/oauth/token` grants and 3 of ~30 documented operations.
+Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userinfo`, `/authorize`,
+`/v2/logout`, `/oidc/logout`, `/oauth/revoke`, and `/oauth/token` with the `authorization_code`, PKCE,
+`client_credentials`, `refresh_token` and `password` / `password-realm` grants.
 
-**P0**
+**P0 — done. The authorization-code flow is complete end to end.**
 
-- [ ] `refresh_token` grant — [docs](https://auth0.com/docs/api/authentication/refresh-token/refresh-token)
-- [ ] Resource Owner Password grant (`password` / `password-realm`) — the replacement for the removed
-      `Login.database/6`, so there is currently no password-grant path at all
+- [x] `refresh_token` grant — `Token.refresh/3`
+      — [docs](https://auth0.com/docs/api/authentication/refresh-token/refresh-token)
+- [x] Resource Owner Password grant — `Token.password/4`, switching to `password-realm` when given a
+      `:realm`. Replaces the removed `Login.database/6`
       — [docs](https://auth0.com/docs/api/authentication/resource-owner-password-flow/get-token)
-- [ ] `POST /oauth/revoke` — [docs](https://auth0.com/docs/api/authentication/revoke-refresh-token/revoke-refresh-token)
-- [ ] `GET /authorize` URL builder — [docs](https://auth0.com/docs/api/authentication/authorization-code-flow/authorize-application)
-- [ ] Logout URL builders: `GET /v2/logout`, `GET|POST /oidc/logout`
+- [x] `POST /oauth/revoke` — `Token.revoke/3`, normalising Auth0's empty 200 body to `:ok`
+      — [docs](https://auth0.com/docs/api/authentication/revoke-refresh-token/revoke-refresh-token)
+- [x] `GET /authorize` URL builder — `Url.authorize/2`
+      — [docs](https://auth0.com/docs/api/authentication/authorization-code-flow/authorize-application)
+- [x] Logout URL builders — `Url.logout/1` (`/v2/logout`) and `Url.oidc_logout/1` (`/oidc/logout`)
 
 **P1**
 
@@ -111,7 +116,8 @@ The library implements 3 of ~11 `/oauth/token` grants and 3 of ~30 documented op
 - [ ] `signup/5` forces `client_id` and `email` positionally, though only `password` and `connection` are
       required — username- and phone-based connections have to pass a dummy email
 - [ ] `client_credentials/3` cannot pass `organization` or use Private Key JWT (`client_assertion`)
-- [ ] No `auth0-forwarded-for` support (needs per-request headers)
+- [x] `auth0-forwarded-for` — supported on `Token.password/4` via `:forwarded_for`, so brute-force
+      protection sees the end user's address rather than the server's
 
 ## 5. Management API
 
@@ -169,8 +175,10 @@ These are correct but incomplete — worth folding into whichever module you tou
 Raised by a downstream dependency audit of this library (2026-07-21) and still open. None are API-parity
 issues; they are the things that bite under load or partial failure.
 
-- [ ] **`Parser` discards response headers**, so `Retry-After` is unreachable to callers even though Req now
-      retries transient failures by default. Rate-limit handling above the library is impossible without it
+- [x] **`Parser` discarded response headers**, making `Retry-After` unreachable. Failures are now a single
+      `Auth0Ex.Error` struct carrying `reason`, `status`, `body` and `headers`, with
+      `Auth0Ex.Error.retry_after/1` to read the backoff. This also collapsed the two error shapes into one,
+      which was itself a source of `FunctionClauseError` in a consuming app
 - [ ] **Token expiry has no skew margin, no single-flight, and no invalidation on 401.** `Utils.expired?/1`
       compares against `DateTime.utc_now()` exactly, so a token expiring mid-flight is used anyway; N
       concurrent callers on a cold cache all fetch their own token; and a token rejected as expired by Auth0
@@ -184,6 +192,10 @@ issues; they are the things that bite under load or partial failure.
 
 ### Settled, recorded so it is not re-litigated
 
+- **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
+  `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
+  `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding
+  has no representation for a nested object — `URI.encode_query/1` raises on one. Do not "unify" these.
 - **TLS verification is enforced.** Re-verified on the Req/Finch path after the migration: expired,
   hostname-mismatch and self-signed certificates are all rejected, a valid host succeeds. Trust now comes
   from OTP's system CA store via Mint rather than `certifi` via hackney, so the pre-migration evidence chain

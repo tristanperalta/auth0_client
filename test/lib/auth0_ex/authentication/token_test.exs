@@ -122,6 +122,168 @@ defmodule Auth0Ex.Authentication.TokenTest do
     end
   end
 
+  describe "refresh/2,3" do
+    test "posts the refresh_token grant" do
+      stub_request(%{"access_token" => "a_new_token"})
+
+      assert {:ok, %{"access_token" => "a_new_token"}} = Token.refresh("an_id", "a_refresh_token")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "refresh_token" => "a_refresh_token",
+               "grant_type" => "refresh_token"
+             }
+    end
+
+    test "sends no client_secret for a public client" do
+      stub_request(%{"access_token" => "a_new_token"})
+      Token.refresh("an_id", "a_refresh_token")
+
+      refute Map.has_key?(assert_receive_request().body, "client_secret")
+    end
+
+    test "posts a client_secret and scope given in opts" do
+      stub_request(%{"access_token" => "a_new_token"})
+
+      Token.refresh("an_id", "a_refresh_token", %{
+        client_secret: "a_secret",
+        scope: "openid profile"
+      })
+
+      body = assert_receive_request().body
+      assert body["client_secret"] == "a_secret"
+      assert body["scope"] == "openid profile"
+    end
+  end
+
+  describe "password/3,4" do
+    test "posts the password grant" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, %{"access_token" => "a_token"}} =
+               Token.password("an_id", "user@example.com", "a_password")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "username" => "user@example.com",
+               "password" => "a_password",
+               "grant_type" => "password"
+             }
+    end
+
+    test "a realm switches to the password-realm grant" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.password("an_id", "user@example.com", "a_password", %{
+        realm: "Username-Password-Authentication"
+      })
+
+      body = assert_receive_request().body
+      assert body["grant_type"] == "http://auth0.com/oauth/grant-type/password-realm"
+      assert body["realm"] == "Username-Password-Authentication"
+    end
+
+    test "posts audience, scope and client_secret from opts" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.password("an_id", "user@example.com", "a_password", %{
+        audience: "https://api.example.com",
+        scope: "openid",
+        client_secret: "a_secret"
+      })
+
+      body = assert_receive_request().body
+      assert body["audience"] == "https://api.example.com"
+      assert body["scope"] == "openid"
+      assert body["client_secret"] == "a_secret"
+    end
+
+    test "forwards the end user's ip for brute-force protection" do
+      stub_request(%{"access_token" => "a_token"})
+
+      Token.password("an_id", "user@example.com", "a_password", %{forwarded_for: "198.51.100.7"})
+
+      request = assert_receive_request()
+      assert {"auth0-forwarded-for", "198.51.100.7"} in request.headers
+      refute Map.has_key?(request.body, "forwarded_for")
+    end
+
+    test "sends no forwarding header when no ip is given" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.password("an_id", "user@example.com", "a_password")
+
+      refute List.keymember?(assert_receive_request().headers, "auth0-forwarded-for", 0)
+    end
+  end
+
+  describe "revoke/2,3" do
+    test "posts to the revoke endpoint and normalises the empty 200 body to :ok" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+
+      assert :ok = Token.revoke("an_id", "a_refresh_token")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/revoke"
+      assert request.body == %{"client_id" => "an_id", "token" => "a_refresh_token"}
+    end
+
+    test "posts a client_secret given in opts" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+
+      assert :ok = Token.revoke("an_id", "a_refresh_token", %{client_secret: "a_secret"})
+
+      assert assert_receive_request().body["client_secret"] == "a_secret"
+    end
+
+    test "surfaces a rejection as an error" do
+      stub_request(fn conn ->
+        conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"error" => "invalid_request"})
+      end)
+
+      assert {:error, %Auth0Ex.Error{reason: :bad_request, status: 400}} =
+               Token.revoke("an_id", "a_refresh_token")
+    end
+  end
+
+  describe "encoding" do
+    test "token requests are form-encoded, as RFC 6749 and Auth0 specify" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.client_credentials("an_id", "a_secret", "an_audience")
+
+      assert assert_receive_request().content_type == "application/x-www-form-urlencoded"
+    end
+
+    test "every grant uses the same encoding" do
+      for call <- [
+            fn -> Token.auth_code("an_id", "a_secret", "a_code") end,
+            fn -> Token.auth_code_pkce("an_id", "a_code", "a_verifier") end,
+            fn -> Token.refresh("an_id", "a_refresh_token") end,
+            fn -> Token.password("an_id", "a_user", "a_password") end
+          ] do
+        stub_request(%{"access_token" => "a_token"})
+        call.()
+
+        assert assert_receive_request().content_type == "application/x-www-form-urlencoded"
+      end
+    end
+
+    test "revoke is form-encoded too" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+      Token.revoke("an_id", "a_refresh_token")
+
+      assert assert_receive_request().content_type == "application/x-www-form-urlencoded"
+    end
+  end
+
   describe "authorization" do
     test "sends no authorization header" do
       stub_request(%{"access_token" => "a_token"})

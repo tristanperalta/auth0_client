@@ -50,6 +50,20 @@ defmodule Auth0Ex.Api do
         do_request(:post, path, %{}, Jason.encode!(body), extra_headers)
       end
 
+      # OAuth 2.0 (RFC 6749) specifies a form-encoded body for the token endpoints,
+      # and Auth0 documents the same. Other Auth0 endpoints take JSON — follow each
+      # endpoint's own docs rather than picking a house convention.
+      @doc false
+      def do_post_form(path, body, extra_headers \\ []) do
+        do_request(
+          :post,
+          path,
+          %{},
+          URI.encode_query(body),
+          merge_headers([{"Content-Type", "application/x-www-form-urlencoded"}], extra_headers)
+        )
+      end
+
       @doc false
       def do_put(path, body \\ %{}) do
         do_request(:put, path, %{}, Jason.encode!(body))

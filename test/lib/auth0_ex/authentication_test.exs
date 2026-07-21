@@ -110,6 +110,38 @@ defmodule Auth0Ex.AuthenticationTest do
     end
   end
 
+  describe "encoding" do
+    # Auth0 is split: /oauth/* takes form-encoded bodies, /dbconnections/* takes
+    # JSON. These pin the JSON side, because form encoding cannot represent the
+    # nested user_metadata that signup documents.
+    test "signup is sent as JSON" do
+      stub_request(%{"_id" => "1"})
+      Authentication.signup("a_client_id", "a@b.com", "pwd", "a_connection")
+
+      assert assert_receive_request().content_type == "application/json"
+    end
+
+    test "change_password is sent as JSON" do
+      stub_request(%{"_id" => "1"})
+      Authentication.change_password("a_client_id", "a@b.com", "a_connection")
+
+      assert assert_receive_request().content_type == "application/json"
+    end
+
+    test "nested user_metadata survives the round trip" do
+      stub_request(%{"_id" => "1"})
+
+      Authentication.signup("a_client_id", "a@b.com", "pwd", "a_connection", %{
+        user_metadata: %{plan: "silver", team_id: "a111"}
+      })
+
+      assert assert_receive_request().body["user_metadata"] == %{
+               "plan" => "silver",
+               "team_id" => "a111"
+             }
+    end
+  end
+
   describe "authorization" do
     test "sends no authorization header when the caller supplies no token" do
       stub_request(%{"_id" => "1"})

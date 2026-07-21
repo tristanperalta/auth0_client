@@ -2,18 +2,19 @@ defmodule Auth0Ex.Parser do
   @moduledoc """
   Parser to parse all the responses from Auth0 API endpoints.
 
-  Req decodes JSON response bodies automatically, so both successful and failed
-  responses carry already-decoded terms. Bodies that are not JSON (an HTML error
-  page, say) are passed through as the raw binary Req produced.
+  Req decodes JSON response bodies automatically, so a successful response carries
+  an already-decoded term. Bodies that are not JSON — an HTML error page, say — are
+  passed through as the raw binary Req produced.
+
+  Every failure becomes an `Auth0Ex.Error`, which carries the response headers so
+  callers can honour `Retry-After` on a 429.
   """
+
+  alias Auth0Ex.Error
 
   @type status_code :: non_neg_integer
   @type body :: map | list | binary
-  @type response ::
-          {:ok, body}
-          | :ok
-          | {:error, body, status_code}
-          | {:error, %{reason: term}}
+  @type response :: {:ok, body} | :ok | {:error, Error.t()}
 
   @doc """
   Parses the response from auth0 api calls
@@ -25,19 +26,21 @@ defmodule Auth0Ex.Parser do
 
   def parse({:ok, %Req.Response{status: 204}}), do: :ok
 
-  def parse({:ok, %Req.Response{status: status, body: body}}) do
-    {:error, body, status}
+  def parse({:ok, %Req.Response{status: status, body: body, headers: headers}}) do
+    {:error, Error.from_response(status, body, headers)}
   end
 
   def parse({:error, %Req.TransportError{reason: reason}}) do
-    {:error, %{reason: reason}}
+    {:error, Error.from_reason(reason)}
   end
 
   def parse({:error, %Req.HTTPError{reason: reason}}) do
-    {:error, %{reason: reason}}
+    {:error, Error.from_reason(reason)}
   end
 
+  def parse({:error, %Error{} = error}), do: {:error, error}
+
   def parse({:error, exception}) when is_exception(exception) do
-    {:error, %{reason: Exception.message(exception)}}
+    {:error, Error.from_reason(:request_failed, body: Exception.message(exception))}
   end
 end

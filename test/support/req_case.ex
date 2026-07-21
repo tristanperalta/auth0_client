@@ -85,13 +85,28 @@ defmodule Auth0Ex.ReqCase do
       query: URI.decode_query(conn.query_string),
       query_string: conn.query_string,
       headers: conn.req_headers,
-      body: decode_body(body)
+      content_type: content_type(conn),
+      body: decode_body(body, content_type(conn))
     }
   end
 
-  defp decode_body(""), do: ""
+  defp content_type(conn) do
+    conn
+    |> Plug.Conn.get_req_header("content-type")
+    |> List.first()
+    |> case do
+      nil -> nil
+      value -> value |> String.split(";", parts: 2) |> hd() |> String.trim()
+    end
+  end
 
-  defp decode_body(body) do
+  defp decode_body("", _content_type), do: ""
+
+  # Decoded by the content type the request actually declared, so a test asserting
+  # on `body` sees the same structure regardless of which encoding the endpoint uses.
+  defp decode_body(body, "application/x-www-form-urlencoded"), do: URI.decode_query(body)
+
+  defp decode_body(body, _content_type) do
     case Jason.decode(body) do
       {:ok, decoded} -> decoded
       {:error, _} -> body
