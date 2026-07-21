@@ -118,7 +118,7 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 ```
 
 Available resources: `Action`, `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`,
-`Job`, `Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
+`Guardian`, `Job`, `Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
 
 ### Roles and permissions
 
@@ -154,6 +154,37 @@ User.effective_permission_source_roles("auth0|abc123",
   resource_server_identifier: "https://api.example.com",
   permission_name: "write:content"
 )
+```
+
+### Multi-factor authentication
+
+`Guardian` is the tenant-wide configuration — which factors exist and how they are delivered. The per-user
+side lives on `User`.
+
+```elixir
+alias Auth0Ex.Management.{Guardian, User}
+
+Guardian.factors()
+#=> {:ok, [%{"name" => "otp", "enabled" => false}, ...]}
+
+Guardian.update_factor("otp", %{enabled: true})
+Guardian.update_policies(["all-applications"])   # a bare list, not a map
+
+# Enrol a user out of band — hand them the ticket_url, or let Auth0 email it
+{:ok, %{"ticket_url" => url}} =
+  Guardian.create_enrollment_ticket(%{user_id: "auth0|abc123", send_mail: false})
+
+# Per-user: what they enrolled, and resetting it
+User.enrollments("auth0|abc123")
+User.delete_authenticators("auth0|abc123")
+```
+
+For providers offering both verbs, `update_*` merges (`PATCH`) and `replace_*` overwrites the whole
+configuration (`PUT`):
+
+```elixir
+Guardian.update_apns(%{sandbox: true})                        # merge
+Guardian.replace_apns(%{bundle_id: "com.example.app", ...})   # overwrite
 ```
 
 ### Bulk import and export

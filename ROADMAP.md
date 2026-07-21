@@ -6,22 +6,30 @@ Endpoint counts come from Auth0's [OpenAPI 3.1 document](https://auth0.com/docs/
 for the Management API, enumerated programmatically, and from the
 [Authentication API reference](https://auth0.com/docs/api/authentication) page by page. Audited 2026-07-21.
 
-A doc URL returning HTTP 200 does not prove an endpoint exists — retired resources still render the generic
-Management API index. Absence from the OpenAPI document and from the resource nav is the reliable signal.
+Two things that look like evidence and are not:
+
+- **A doc URL returning HTTP 200 does not prove an endpoint exists.** Retired resources still render the
+  generic Management API index. Absence from the OpenAPI document and from the resource nav is the reliable
+  signal.
+- **The OpenAPI `deprecated` flag is unreliable.** Every `guardian` endpoint reads `deprecated: false`,
+  including five whose own description begins "This endpoint has been deprecated." Read the description
+  text, and check the
+  [product lifecycle page](https://auth0.com/docs/troubleshoot/product-lifecycle/deprecations-and-migrations);
+  the flag is at best a weak positive signal.
 
 ## Coverage at a glance
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 144 | 451 | ~32% |
+| Management v2 | 174 | 451 | ~39% |
 | Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
-Management resource groups: 9 fully covered, 5 partial, 35 with no coverage at all.
+Management resource groups: 9 fully covered, 6 partial, 34 with no coverage at all.
 
 - **Full:** `device-credentials`, `emails`, `jobs`, `logs`, `resource-servers`, `roles`, `tickets`,
   `user-blocks`, `users`
-- **Partial:** `organizations` 37/42, `actions` 14/24, `clients` 6/14, `connections` 6/28,
-  `client-grants` 4/6
+- **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `clients` 6/14,
+  `connections` 6/28, `client-grants` 4/6
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
 RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
@@ -140,8 +148,10 @@ Ordered by value. Counts are endpoints in each group.
 - [x] **`Organization` (37 of 42)** — `Auth0Ex.Management.Organization`. CRUD, members, member roles,
       invitations, connections, client grants, discovery domains and groups. The five `/enabled_connections`
       endpoints are deliberately not wrapped — see §7
-- [ ] **`Guardian` (36)** — MFA factor configuration. `User.enrollments/1` currently dangles with no way to
-      configure the factors it reports
+- [x] **`Guardian` (30 of 36)** — `Auth0Ex.Management.Guardian`. Factors, policies, enrollment tickets, and
+      phone, push and Duo provider configuration. Pairs with `User.enrollments/1` and
+      `User.delete_authenticators/1`, which previously had no configuration side. The six
+      `/guardian/factors/sms/*` endpoints are deprecated and not wrapped — see §7
 - [ ] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — six endpoints total, all common lookups. Best
       effort-to-value ratio available
 - [x] **`Action` (14 of 24)** — `Auth0Ex.Management.Action`. Actions CRUD, deploy, test, versions and
@@ -213,6 +223,11 @@ issues; they are the things that bite under load or partial failure.
   `:ok`, so callers never get a meaningless `{:ok, ""}` and no endpoint needs its own special case.
 - **`/actions/modules` is deferred, not rejected.** The 10 endpoints share reusable code between actions,
   which is orthogonal to replacing a Rule. This is why `actions` reads 14/24.
+- **`/guardian/factors/sms/*` is not wrapped.** Five of the six say "This endpoint has been deprecated" in
+  their own description and name a `/guardian/factors/phone/*` replacement taking the same payload; the
+  sixth says a new phone endpoint with the same payload exists. Applying §3's rule, they are excluded —
+  which is why `guardian` reads 30/36. Note they all read `deprecated: false` in the OpenAPI document,
+  which is what prompted the methodology correction at the top of this file.
 - **`/organizations/{id}/enabled_connections` is deliberately not wrapped.** Auth0 ships it alongside
   `/organizations/{id}/connections` with the same semantics; neither is formally deprecated, but
   `/connections` takes a superset of the body (`organization_connection_name`, `organization_access_level`,
