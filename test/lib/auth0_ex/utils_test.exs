@@ -92,6 +92,27 @@ defmodule Auth0Ex.UtilsTest do
     end
   end
 
+  describe "drop_header/2" do
+    test "removes a header by name" do
+      assert [{"B", "2"}] == Utils.drop_header([{"A", "1"}, {"B", "2"}], "A")
+    end
+
+    test "matches case-insensitively" do
+      assert [] == Utils.drop_header([{"Content-Type", "application/json"}], "content-type")
+      assert [] == Utils.drop_header([{"content-type", "application/json"}], "Content-Type")
+    end
+
+    test "removes every occurrence" do
+      assert [] == Utils.drop_header([{"A", "1"}, {"a", "2"}], "A")
+    end
+
+    test "leaves the list alone when the header is absent" do
+      headers = [{"A", "1"}]
+
+      assert headers == Utils.drop_header(headers, "B")
+    end
+  end
+
   describe "normalize_permissions/1" do
     test "expands a tuple into the documented map" do
       assert [%{resource_server_identifier: "https://api", permission_name: "read:users"}] ==

@@ -13,14 +13,15 @@ Management API index. Absence from the OpenAPI document and from the resource na
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 124 | 451 | ~27% |
+| Management v2 | 144 | 451 | ~32% |
 | Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
-Management resource groups: 7 fully covered, 7 partial, 35 with no coverage at all.
+Management resource groups: 9 fully covered, 5 partial, 35 with no coverage at all.
 
-- **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `roles`, `tickets`, `user-blocks`
-- **Partial:** `organizations` 37/42, `users` 23/39, `actions` 14/24, `clients` 6/14, `connections` 6/28,
-  `client-grants` 4/6, `jobs` 1/5
+- **Full:** `device-credentials`, `emails`, `jobs`, `logs`, `resource-servers`, `roles`, `tickets`,
+  `user-blocks`, `users`
+- **Partial:** `organizations` 37/42, `actions` 14/24, `clients` 6/14, `connections` 6/28,
+  `client-grants` 4/6
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
 RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
@@ -44,6 +45,10 @@ parameter shape either.
       `/dbconnections/*` stays JSON — see the encoding rule in §7
 - [x] URL-only builders for endpoints that are browser redirects rather than calls the library should
       make — `Auth0Ex.Authentication.Url`
+- [x] Multipart uploads — `do_post_multipart/2`, for `POST /jobs/users-imports`, which Auth0 accepts in no
+      other encoding. Needs `Utils.drop_header/2` rather than `merge_headers/2`: Req sets the multipart
+      content-type with `put_new_header`, so the default `application/json` would win and the boundary
+      would never be sent
 
 ## 2. Known-broken
 
@@ -128,10 +133,10 @@ Ordered by value. Counts are endpoints in each group.
       fully covered
 - [x] **`User` RBAC** — `assign_roles/2`, `remove_roles/2`, the permissions endpoints, `organizations/2`,
       and the `effective-*` lookups that resolve access inherited through groups
-- [ ] **Complete `User` (16 still missing)** — authentication methods (6), sessions and refresh-token
-      revocation, and the remaining identity endpoints
-- [ ] **Complete `Job` (4 missing)** — `users-imports`, `users-exports`, `GET /jobs/{id}`, `/jobs/{id}/errors`.
-      The module sends verification emails and nothing else, so bulk migration is impossible
+- [x] **Complete `User` (39 of 39)** — authentication methods, sessions and refresh-token revocation,
+      `revoke_access/2`, groups, connected accounts and risk-assessment clearing. The group is fully covered
+- [x] **Complete `Job` (5 of 5)** — `users_imports/3`, `users_exports/1`, `get/1` and `errors/1`. Bulk
+      migration works in both directions; import required multipart support, added in §1
 - [x] **`Organization` (37 of 42)** — `Auth0Ex.Management.Organization`. CRUD, members, member roles,
       invitations, connections, client grants, discovery domains and groups. The five `/enabled_connections`
       endpoints are deliberately not wrapped — see §7
@@ -164,16 +169,19 @@ These are correct but incomplete — worth folding into whichever module you tou
       It is the only list function in the library without params
 - [ ] `Log.search/1` ignores the documented 100-record-per-request cap and the 1,000-result pagination
       ceiling; `include_totals` is deprecated on `/logs`
-- [ ] `User.all/1` ignores the 1,000-record cap and v3 search semantics (`.raw` removed,
-      `connection` → `identities.connection`, case sensitivity)
+- [x] `User.all/1` — v3 search semantics and the 1,000-record cap are now documented on the function, with
+      a pointer to `Job.users_exports/1` for anything larger. `get/2` also accepts a keyword list now,
+      matching `all/1`
 - [ ] `Client.all/1` — `q` now requires checkpoint pagination (`from`/`take`) and carries reduced rate limits
 - [ ] `Connection.all/1` — more than 1,000 connections requires checkpoint pagination
 - [ ] `Connection.update/2` — `name` and `strategy` are immutable, so the module's own doc example is
       invalid; `enabled_clients` is deprecated in favour of `PATCH /connections/{id}/clients`
 - [ ] `UserBlock.get/1` and `get_user_block/1` cannot pass `consider_brute_force_enablement`
 - [ ] `EmailProvider.configure/1` — the doc example omits the now-required `credentials`
-- [ ] `User.enrollments/1` returns the first confirmed MFA enrollment, not all of them as its `@doc` claims
-- [ ] `Job.send_verification_email/1` defaults to an empty body, but Auth0 requires `user_id`
+- [x] `User.enrollments/1` — the `@doc` claimed "all Guardain enrollments"; corrected to say Auth0 returns
+      only the first confirmed enrollment
+- [x] `Job.send_verification_email/1` — the empty-body default is gone, so a call without `user_id` fails
+      to compile rather than at runtime
 - [ ] `Ticket.email_verification/2` silently overrides any `user_id` in the body
 - [ ] `build_url/2` always appends `?` even with no params
 
@@ -215,7 +223,9 @@ issues; they are the things that bite under load or partial failure.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
   `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
   `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding
-  has no representation for a nested object — `URI.encode_query/1` raises on one. Do not "unify" these.
+  has no representation for a nested object — `URI.encode_query/1` raises on one. `/jobs/users-imports` is
+  `multipart/form-data`, which Auth0 accepts in no other encoding. Three encodings, each chosen per
+  endpoint. Do not "unify" these.
 - **TLS verification is enforced.** Re-verified on the Req/Finch path after the migration: expired,
   hostname-mismatch and self-signed certificates are all rejected, a valid host succeeds. Trust now comes
   from OTP's system CA store via Mint rather than `certifi` via hackney, so the pre-migration evidence chain

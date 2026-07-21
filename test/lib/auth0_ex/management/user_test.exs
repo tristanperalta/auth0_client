@@ -64,6 +64,14 @@ defmodule Auth0Ex.Management.UserTest do
 
       assert assert_receive_request().query == %{"fields" => "email,name,username"}
     end
+
+    test "accepts a keyword list, like all/1" do
+      stub_request(%{"user_id" => "auth0|123"})
+
+      assert {:ok, _} = User.get("auth0|123", fields: "email")
+
+      assert assert_receive_request().query == %{"fields" => "email"}
+    end
   end
 
   describe "create/1,2" do
@@ -410,6 +418,199 @@ defmodule Auth0Ex.Management.UserTest do
                "resource_server_identifier" => "https://api.example.com",
                "permission_name" => "read:users"
              }
+    end
+  end
+
+  describe "authentication methods" do
+    test "authentication_methods/2 lists them" do
+      stub_request([%{"id" => "aum_1", "type" => "totp"}])
+
+      assert {:ok, [%{"id" => "aum_1"}]} = User.authentication_methods("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+    end
+
+    test "authentication_method/2 gets one" do
+      stub_request(%{"id" => "aum_1"})
+
+      assert {:ok, %{"id" => "aum_1"}} = User.authentication_method("auth0|123", "aum_1")
+
+      assert assert_receive_request().path ==
+               "/api/v2/users/auth0|123/authentication-methods/aum_1"
+    end
+
+    test "create_authentication_method/2 posts the method" do
+      stub_request(%{"id" => "aum_1"})
+
+      assert {:ok, _} =
+               User.create_authentication_method("auth0|123", %{type: "email", email: "a@b.com"})
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+      assert request.body == %{"type" => "email", "email" => "a@b.com"}
+    end
+
+    test "update_authentication_method/3 patches it" do
+      stub_request(%{"id" => "aum_1"})
+
+      assert {:ok, _} =
+               User.update_authentication_method("auth0|123", "aum_1", %{name: "Work phone"})
+
+      request = assert_receive_request()
+      assert request.method == "PATCH"
+      assert request.path == "/api/v2/users/auth0|123/authentication-methods/aum_1"
+      assert request.body == %{"name" => "Work phone"}
+    end
+
+    test "delete_authentication_method/2 deletes one" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.delete_authentication_method("auth0|123", "aum_1")
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/authentication-methods/aum_1"
+    end
+
+    # The body here is a bare array, not an object wrapping one.
+    test "replace_authentication_methods/2 puts a bare list" do
+      stub_request([%{"id" => "aum_1"}])
+
+      assert {:ok, _} =
+               User.replace_authentication_methods("auth0|123", [
+                 %{type: "email", email: "a@b.com"}
+               ])
+
+      request = assert_receive_request()
+      assert request.method == "PUT"
+      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+      assert request.body == [%{"type" => "email", "email" => "a@b.com"}]
+      assert is_list(request.body)
+    end
+  end
+
+  describe "MFA reset" do
+    test "delete_authenticators/1 clears every authenticator" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.delete_authenticators("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/authenticators"
+    end
+
+    test "invalidate_remember_browser/1 forces the next login to prompt" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.invalidate_remember_browser("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+
+      assert request.path ==
+               "/api/v2/users/auth0|123/multifactor/actions/invalidate-remember-browser"
+    end
+  end
+
+  describe "sessions and refresh tokens" do
+    test "sessions/2 lists them with checkpoint pagination" do
+      stub_request(%{"sessions" => []})
+
+      assert {:ok, %{"sessions" => []}} = User.sessions("auth0|123", take: 10)
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/sessions"
+      assert request.query == %{"take" => "10"}
+    end
+
+    # These answer 202, which only became a success case recently.
+    test "delete_sessions/1 signs the user out everywhere" do
+      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+
+      assert {:ok, _} = User.delete_sessions("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/sessions"
+    end
+
+    test "refresh_tokens/2 lists them" do
+      stub_request(%{"tokens" => []})
+
+      assert {:ok, %{"tokens" => []}} = User.refresh_tokens("auth0|123", from: "cursor")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/refresh-tokens"
+      assert request.query == %{"from" => "cursor"}
+    end
+
+    test "delete_refresh_tokens/1 revokes them" do
+      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+
+      assert {:ok, _} = User.delete_refresh_tokens("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/refresh-tokens"
+    end
+
+    test "revoke_access/2 revokes sessions and tokens together" do
+      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+
+      assert {:ok, _} = User.revoke_access("auth0|123", %{preserve_refresh_tokens: true})
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/users/auth0|123/revoke-access"
+      assert request.body == %{"preserve_refresh_tokens" => true}
+    end
+
+    test "revoke_access/1 defaults to an empty body" do
+      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+
+      assert {:ok, _} = User.revoke_access("auth0|123")
+
+      assert assert_receive_request().body == %{}
+    end
+  end
+
+  describe "groups, connected accounts and risk assessments" do
+    test "groups/2 lists the user's groups" do
+      stub_request([%{"id" => "grp_1"}])
+
+      assert {:ok, [%{"id" => "grp_1"}]} = User.groups("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/groups"
+    end
+
+    test "connected_accounts/2 lists them with checkpoint pagination" do
+      stub_request(%{"connected_accounts" => []})
+
+      assert {:ok, _} = User.connected_accounts("auth0|123", take: 5)
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/connected-accounts"
+      assert request.query == %{"take" => "5"}
+    end
+
+    test "clear_risk_assessments/2 posts to the clear path" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.clear_risk_assessments("auth0|123", %{assessors: ["NewDevice"]})
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/users/auth0|123/risk-assessments/clear"
+      assert request.body == %{"assessors" => ["NewDevice"]}
     end
   end
 

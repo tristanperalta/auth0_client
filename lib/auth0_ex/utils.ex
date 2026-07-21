@@ -60,6 +60,19 @@ defmodule Auth0Ex.Utils do
   end
 
   @doc """
+  Removes a header by name, comparing case-insensitively.
+
+  Needed for multipart uploads: Req sets its own `content-type` carrying the
+  boundary, but only with `put_new_header`, so the default `application/json`
+  would win and the boundary would never be sent.
+  """
+  def drop_header(headers, name) do
+    name = String.downcase(name)
+
+    Enum.reject(headers, fn {header, _value} -> String.downcase(header) == name end)
+  end
+
+  @doc """
   Normalises a list of permissions into the shape Auth0's RBAC endpoints expect.
 
   Auth0 wants `%{resource_server_identifier: _, permission_name: _}` per permission,

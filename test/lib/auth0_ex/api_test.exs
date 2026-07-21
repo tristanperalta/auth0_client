@@ -22,6 +22,7 @@ defmodule Auth0Ex.ApiTest do
     def get_it(path, params \\ %{}), do: do_get(path, params)
     def get_it(path, params, headers), do: do_get(path, params, headers)
     def post_it(path, body, headers), do: do_post(path, body, headers)
+    def post_multipart_it(path, fields), do: do_post_multipart(path, fields)
   end
 
   defmodule DefaultParamsEndpoint do
@@ -211,6 +212,50 @@ defmodule Auth0Ex.ApiTest do
       headers = assert_receive_request().headers
       assert Enum.count(headers, &match?({"authorization", _}, &1)) == 1
       assert {"authorization", "Bearer OVERRIDE"} in headers
+    end
+  end
+
+  describe "do_post_multipart/2" do
+    defp content_type(request) do
+      request.headers |> List.keyfind("content-type", 0) |> elem(1)
+    end
+
+    # Req sets the multipart content-type with put_new_header, so the default
+    # application/json has to be removed or it wins and the boundary is lost.
+    test "replaces the default json content type with a multipart one" do
+      stub_request(%{})
+      AuthEndpoint.post_multipart_it("upload", file: {"contents", filename: "a.json"})
+
+      type = content_type(assert_receive_request())
+      assert type =~ "multipart/form-data"
+      assert type =~ "boundary="
+      refute type =~ "application/json"
+    end
+
+    test "sends exactly one content-type header" do
+      stub_request(%{})
+      AuthEndpoint.post_multipart_it("upload", field: "value")
+
+      headers = assert_receive_request().headers
+      assert Enum.count(headers, &match?({"content-type", _}, &1)) == 1
+    end
+
+    test "keeps the other default headers" do
+      stub_request(%{})
+      AuthEndpoint.post_multipart_it("upload", field: "value")
+
+      assert List.keyfind(assert_receive_request().headers, "user-agent", 0)
+    end
+
+    test "encodes each field as a part" do
+      stub_request(%{})
+      AuthEndpoint.post_multipart_it("upload", one: "first", two: "second")
+
+      body = assert_receive_request().body
+      assert body =~ ~s(name="one")
+      assert body =~ "first"
+      assert body =~ ~s(name="two")
+      assert body =~ "second"
     end
   end
 

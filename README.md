@@ -156,6 +156,33 @@ User.effective_permission_source_roles("auth0|abc123",
 )
 ```
 
+### Bulk import and export
+
+Jobs are asynchronous: they return immediately and do the work in the background, so start one, poll it,
+then check for errors.
+
+```elixir
+alias Auth0Ex.Management.Job
+
+# Export — poll until the job carries a `location` to download from
+{:ok, job} = Job.users_exports(%{connection_id: "con_abc123", format: "json"})
+{:ok, %{"status" => "completed", "location" => url}} = Job.get(job["id"])
+
+# Import — takes the contents of a JSON file, or a stream for a large one
+{:ok, job} = Job.users_imports(File.read!("users.json"), "con_abc123", %{upsert: true})
+{:ok, job} = Job.users_imports(File.stream!("users.json"), "con_abc123")
+
+# A clean import returns a bare :ok; a partial one returns the failed records
+case Job.errors(job["id"]) do
+  :ok -> :imported_cleanly
+  {:ok, errors} -> handle(errors)
+end
+```
+
+Import is the one endpoint Auth0 accepts only as `multipart/form-data`; the library handles that for you.
+
+Note that `User.all/1` caps at 1,000 records — use an export for anything larger.
+
 ### Actions
 
 Actions are Auth0's extensibility model — Node functions that run at points in the login flow. They replace

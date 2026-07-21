@@ -12,6 +12,15 @@ defmodule Auth0Ex.Management.User do
   Defaults to the v3 search engine, which is the only one Auth0 still supports. Pass
   an explicit `search_engine` to override it.
 
+  v3 search differs from v2 in ways that silently return nothing rather than
+  erroring:
+
+    * `.raw` sub-fields are gone — query the field directly
+    * `connection` became `identities.connection`
+    * matching is case-sensitive
+    * results cap at 1,000 records; use `Auth0Ex.Management.Job.users_exports/1`
+      for anything larger
+
       iex> Auth0Ex.Management.User.all()
       iex> Auth0Ex.Management.User.all(fields: "name", q: "app_metadata.admin:'true'")
   """
@@ -28,7 +37,8 @@ defmodule Auth0Ex.Management.User do
       iex> Auth0Ex.Management.User.get("auth0|some_user_id")
       iex> Auth0Ex.Management.User.get("auth0|some_user_id", %{fields: "email,name,username"})
   """
-  def get(user_id, params \\ %{}) when is_binary(user_id) and is_map(params) do
+  def get(user_id, params \\ %{})
+      when is_binary(user_id) and (is_map(params) or is_list(params)) do
     do_get("#{@path}/#{user_id}", params)
   end
 
@@ -70,7 +80,10 @@ defmodule Auth0Ex.Management.User do
   end
 
   @doc """
-  Get all Guardain enrollments for given user_id
+  Gets the user's first confirmed Guardian MFA enrollment.
+
+  Auth0 returns only the first confirmed enrollment here, not every enrollment the
+  user has.
 
       iex> Auth0Ex.Management.User.enrollments("auth0|234")
   """
@@ -246,5 +259,166 @@ defmodule Auth0Ex.Management.User do
   """
   def delete_authentication_methods(user_id) do
     do_delete("#{@path}/#{user_id}/authentication-methods")
+  end
+
+  @doc """
+  Lists a user's authentication methods — the factors they can log in with.
+
+      iex> Auth0Ex.Management.User.authentication_methods("auth0|23423")
+  """
+  def authentication_methods(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/authentication-methods", params)
+  end
+
+  @doc """
+  Gets a single authentication method
+
+      iex> Auth0Ex.Management.User.authentication_method("auth0|23423", "aum_1")
+  """
+  def authentication_method(user_id, method_id)
+      when is_binary(user_id) and is_binary(method_id) do
+    do_get("#{@path}/#{user_id}/authentication-methods/#{method_id}", %{})
+  end
+
+  @doc """
+  Adds an authentication method. `type` is required — `phone`, `email`, `totp` or
+  `webauthn-roaming`.
+
+      iex> Auth0Ex.Management.User.create_authentication_method("auth0|23423", %{type: "totp", totp_secret: "..."})
+  """
+  def create_authentication_method(user_id, body) when is_binary(user_id) do
+    do_post("#{@path}/#{user_id}/authentication-methods", body)
+  end
+
+  @doc """
+  Updates an authentication method's name or preference
+
+      iex> Auth0Ex.Management.User.update_authentication_method("auth0|23423", "aum_1", %{name: "Work phone"})
+  """
+  def update_authentication_method(user_id, method_id, body)
+      when is_binary(user_id) and is_binary(method_id) do
+    do_patch("#{@path}/#{user_id}/authentication-methods/#{method_id}", body)
+  end
+
+  @doc """
+  Deletes a single authentication method
+
+      iex> Auth0Ex.Management.User.delete_authentication_method("auth0|23423", "aum_1")
+  """
+  def delete_authentication_method(user_id, method_id)
+      when is_binary(user_id) and is_binary(method_id) do
+    do_delete("#{@path}/#{user_id}/authentication-methods/#{method_id}")
+  end
+
+  @doc """
+  Replaces every authentication method the user has.
+
+  The body is a bare list, not an object wrapping one, and anything absent from it
+  is removed.
+
+      iex> Auth0Ex.Management.User.replace_authentication_methods("auth0|23423", [%{type: "email", email: "a@b.com"}])
+  """
+  def replace_authentication_methods(user_id, methods)
+      when is_binary(user_id) and is_list(methods) do
+    do_put("#{@path}/#{user_id}/authentication-methods", methods)
+  end
+
+  @doc """
+  Deletes all of a user's MFA authenticators, forcing re-enrollment
+
+      iex> Auth0Ex.Management.User.delete_authenticators("auth0|23423")
+  """
+  def delete_authenticators(user_id) when is_binary(user_id) do
+    do_delete("#{@path}/#{user_id}/authenticators")
+  end
+
+  @doc """
+  Invalidates every remembered browser, so the user is prompted for MFA again
+
+      iex> Auth0Ex.Management.User.invalidate_remember_browser("auth0|23423")
+  """
+  def invalidate_remember_browser(user_id) when is_binary(user_id) do
+    do_post("#{@path}/#{user_id}/multifactor/actions/invalidate-remember-browser")
+  end
+
+  @doc """
+  Lists a user's active sessions. Uses checkpoint pagination.
+
+      iex> Auth0Ex.Management.User.sessions("auth0|23423")
+  """
+  def sessions(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/sessions", params)
+  end
+
+  @doc """
+  Deletes all of a user's sessions, signing them out everywhere.
+
+  Auth0 accepts this asynchronously and answers `202`.
+
+      iex> Auth0Ex.Management.User.delete_sessions("auth0|23423")
+  """
+  def delete_sessions(user_id) when is_binary(user_id) do
+    do_delete("#{@path}/#{user_id}/sessions")
+  end
+
+  @doc """
+  Lists a user's refresh tokens. Uses checkpoint pagination.
+
+      iex> Auth0Ex.Management.User.refresh_tokens("auth0|23423")
+  """
+  def refresh_tokens(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/refresh-tokens", params)
+  end
+
+  @doc """
+  Deletes all of a user's refresh tokens. Answers `202`.
+
+      iex> Auth0Ex.Management.User.delete_refresh_tokens("auth0|23423")
+  """
+  def delete_refresh_tokens(user_id) when is_binary(user_id) do
+    do_delete("#{@path}/#{user_id}/refresh-tokens")
+  end
+
+  @doc """
+  Revokes a user's access — sessions and refresh tokens together. Answers `202`.
+
+  `session_id` limits it to one session; `preserve_refresh_tokens` keeps the
+  refresh tokens alive.
+
+      iex> Auth0Ex.Management.User.revoke_access("auth0|23423")
+      iex> Auth0Ex.Management.User.revoke_access("auth0|23423", %{preserve_refresh_tokens: true})
+  """
+  def revoke_access(user_id, body \\ %{}) when is_binary(user_id) do
+    do_post("#{@path}/#{user_id}/revoke-access", body)
+  end
+
+  @doc """
+  Lists the groups a user belongs to
+
+      iex> Auth0Ex.Management.User.groups("auth0|23423")
+  """
+  def groups(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/groups", params)
+  end
+
+  @doc """
+  Lists accounts the user has connected from other providers. Uses checkpoint
+  pagination.
+
+      iex> Auth0Ex.Management.User.connected_accounts("auth0|23423")
+  """
+  def connected_accounts(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/connected-accounts", params)
+  end
+
+  @doc """
+  Clears a user's risk assessments, so past signals stop influencing their next
+  login.
+
+      iex> Auth0Ex.Management.User.clear_risk_assessments("auth0|23423")
+      iex> Auth0Ex.Management.User.clear_risk_assessments("auth0|23423", %{assessors: ["NewDevice"]})
+  """
+  def clear_risk_assessments(user_id, body \\ %{}) when is_binary(user_id) do
+    do_post("#{@path}/#{user_id}/risk-assessments/clear", body)
   end
 end

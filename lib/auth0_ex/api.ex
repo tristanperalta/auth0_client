@@ -56,6 +56,13 @@ defmodule Auth0Ex.Api do
         do_request(:post, path, %{}, Jason.encode!(body), extra_headers)
       end
 
+      # File uploads. Field names must be atoms and values binary, iodata, integer
+      # or a File.Stream — Req has no clause for anything else, including booleans.
+      @doc false
+      def do_post_multipart(path, fields) do
+        do_request(:post, path, %{}, {:form_multipart, fields})
+      end
+
       # OAuth 2.0 (RFC 6749) specifies a form-encoded body for the token endpoints,
       # and Auth0 documents the same. Other Auth0 endpoints take JSON — follow each
       # endpoint's own docs rather than picking a house convention.
@@ -140,7 +147,8 @@ defmodule Auth0Ex.Api do
   Lives here rather than in the macro so there is one copy of it, and one place for
   the 401 retry below, instead of a copy compiled into every API module.
   """
-  @spec request(atom, atom, String.t(), iodata, list) :: Parser.response()
+  @spec request(atom, atom, String.t(), iodata | {:form_multipart, list}, list) ::
+          Parser.response()
   def request(tag, method, url, req_body, extra_headers) do
     do_request(tag, method, url, req_body, extra_headers, retry_on_401?(tag))
   end
@@ -150,7 +158,8 @@ defmodule Auth0Ex.Api do
   defp do_request(tag, method, url, req_body, extra_headers, retry?) do
     result =
       with {:ok, headers} <- Utils.request_headers(tag, extra_headers) do
-        [method: method, url: url, headers: headers, body: req_body]
+        [method: method, url: url]
+        |> Keyword.merge(body_options(req_body, headers))
         |> Keyword.merge(Utils.http_opts())
         |> Req.request()
         |> Parser.parse()
@@ -158,6 +167,15 @@ defmodule Auth0Ex.Api do
 
     maybe_retry(result, tag, method, url, req_body, extra_headers, retry?)
   end
+
+  # Req sets the multipart content-type — which carries the boundary — with
+  # put_new_header, so the default application/json would win and the boundary
+  # would never be sent. Drop it and let Req supply its own.
+  defp body_options({:form_multipart, fields}, headers) do
+    [headers: Utils.drop_header(headers, "content-type"), form_multipart: fields]
+  end
+
+  defp body_options(req_body, headers), do: [headers: headers, body: req_body]
 
   # A 401 on a management call usually means the cached token was rejected — the
   # secret rotated, or the client was revoked. Evict it and replay once. A 401 means
