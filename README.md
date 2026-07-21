@@ -77,6 +77,11 @@ Export appropriate environment variable and you should be all set.
 
 Please refer to the [documentation](https://hexdocs.pm/auth0_ex/) for more details.
 
+### API coverage
+
+This library covers a subset of the Auth0 API, and does not support endpoints Auth0 has deprecated or
+retired. See [ROADMAP.md](ROADMAP.md) for what is implemented, what is missing, and what is being removed.
+
 ### Authentication API
 
 In addition to the management API resources, there is also a support for most used authentication APIs.
