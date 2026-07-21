@@ -81,11 +81,42 @@ config :auth0_ex,
   ]
 ```
 
-> #### Options are not validated {: .warning}
+Options are otherwise passed through as written — this library validates exactly one thing.
+
+### TLS verification is enforced
+
+Certificate verification is on by default, and `connect_options: [transport_opts: [verify: :verify_none]]`
+is **refused**. Every call this library makes carries your management client secret or a management token,
+so an unauthenticated connection is not a tradeoff worth offering by accident:
+
+```
+** (ArgumentError) http_opts disables TLS certificate verification ...
+```
+
+If you are reaching for `:verify_none` because of a private certificate authority — a corporate proxy, a
+self-signed development host — trust it properly instead:
+
+```elixir
+config :auth0_ex,
+  http_opts: [connect_options: [transport_opts: [cacertfile: "/path/to/ca.pem"]]]
+```
+
+That is the fix in almost every case. If you genuinely intend to send credentials over an unverified
+connection, say so explicitly and the library will let you:
+
+```elixir
+config :auth0_ex,
+  http_opts: [connect_options: [transport_opts: [verify: :verify_none]]],
+  dangerously_disable_tls_verification: true
+```
+
+It logs a warning at boot for as long as it is set.
+
+> #### One case this cannot catch {: .info}
 >
-> Whatever you put here takes effect as written, including options that weaken TLS. Certificate
-> verification is on by default; `connect_options: [transport_opts: [verify: :verify_none]]` turns it off,
-> and nothing in this library will stop you.
+> `http_opts: [finch: MyPool]` uses a Finch pool started elsewhere in your application. Its TLS settings
+> are fixed when that pool starts and this library never sees them, so verification there is yours to get
+> right.
 
 ## `user_agent`
 

@@ -277,9 +277,11 @@ issues; they are the things that bite under load or partial failure.
 - [x] **`TokenState` exposed the management JWT** through a public `get_all/0`. The key-value API is gone —
       only `fetch/0` and `invalidate/0` remain — and an `Inspect` implementation redacts the token so it
       cannot reach a crash dump or a stray `inspect`
-- [ ] **`http_opts` is an unvalidated pass-through** to `Req.request/1`. A caller can disable certificate
-      verification through it — `connect_options: [transport_opts: [verify: :verify_none]]` — with nothing in
-      the library flagging it. The README now says so; rejecting it outright is the part still open
+- [x] **`http_opts` was an unvalidated pass-through** to `Req.request/1`, so a caller could disable
+      certificate verification through it — `connect_options: [transport_opts: [verify: :verify_none]]` —
+      and send the management client secret over an unauthenticated connection with nothing flagging it.
+      `Config.http_opts/0` now refuses that setting, naming both the correct fix (`cacerts`/`cacertfile`)
+      and the deliberate opt-out. See the settled note below for the scoping
 
 ### Settled, recorded so it is not re-litigated
 
@@ -333,7 +335,25 @@ issues; they are the things that bite under load or partial failure.
 - **TLS verification is enforced.** Re-verified on the Req/Finch path after the migration: expired,
   hostname-mismatch and self-signed certificates are all rejected, a valid host succeeds. Trust now comes
   from OTP's system CA store via Mint rather than `certifi` via hackney, so the pre-migration evidence chain
-  no longer applies — this is the current one
+  no longer applies — this is the current one.
+
+  **And configuration can no longer switch it off by accident.** Three choices worth keeping:
+
+  - **Refused by default, with a loudly-named opt-in** — `dangerously_disable_tls_verification: true`,
+    which also logs a warning at boot. A hard block with no escape hatch strands anyone behind a corporate
+    MITM appliance, and the realistic outcome there is a fork or a version pin, not a fixed trust store.
+    Typing those words is deliberate in a way that copying a config snippet is not.
+  - **Only `verify: :verify_none` is rejected.** `verify_fun` can weaken verification but is also how
+    pinning is done, and `cacerts`/`cacertfile` are the *correct* fix for a private CA — rejecting either
+    would push people toward the very setting this exists to stop. The error message names `cacertfile`
+    for that reason, since people reach for `:verify_none` mostly in ignorance of the alternative.
+  - **Validated on every read of `Auth0Ex.Config.http_opts/0`, not once at boot**, so a runtime
+    `Application.put_env/3` cannot slip past. The traversal is two `Keyword.get/2` calls on a list that is
+    usually empty. `connect_options → transport_opts` is the only TLS path Req exposes, so there is one
+    spelling to check rather than several.
+
+  One hole remains and is documented rather than closed: `http_opts: [finch: MyPool]` uses a pool started
+  elsewhere, whose TLS settings this library never sees.
 - **The `httpoison ~> 2.2` resolver constraint is gone.** It previously blocked consumers from moving to
   httpoison 3.0 / hackney 4.0. Dropping HTTPoison removes hackney from this library's dependency tree
   entirely, along with the EOL 1.x advisories it carried
