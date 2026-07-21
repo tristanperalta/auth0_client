@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/tristanperalta/auth0_client/actions/workflows/main.yml/badge.svg)
 
-> An elixir client library for Auth0
+> An Elixir client for the Auth0 Management and Authentication APIs, built on Req.
 
 This is a fork of [techgaun/auth0_ex](https://github.com/techgaun/auth0_ex), named `auth0_client`
 throughout — the repository, the OTP application, the module namespace and the config key.
@@ -14,16 +14,14 @@ config key to `:auth0_client`, and reading [Error handling](guides/error-handlin
 
 ## Installation
 
-This fork is not published to hex. Depend on it from git:
-
 ```elixir
 def deps do
-  [{:auth0_client, github: "tristanperalta/auth0_client"}]
+  [{:auth0_client, "~> 1.0"}]
 end
 ```
 
-Neither this fork nor the name `auth0_client` is on hex. The `auth0_ex` package there is the upstream
-project, and does not contain this fork's changes.
+The separate `auth0_ex` package on hex is the upstream this was forked from, and does not contain these
+changes.
 
 ## Configuration
 
@@ -121,13 +119,12 @@ Compared against every Auth0 package on hex, as of July 2026. This library moves
 | Token cache renews before expiry | ✅ | — ⁴ | — | ✅ | n/a | n/a | n/a |
 | Single-flight token fetch | ✅ | — | — | ✅ | n/a | n/a | n/a |
 | Cached token redacted from `inspect` | ✅ | — | — | — | n/a | n/a | n/a |
-| Published on hex | — ⁵ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Last release | git | 2025-12 | 2024-03 | **2026-06** | 2024-09 | 2024-06 | 2022-10 |
+| Published on hex | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Last release | **2026-07** | 2025-12 | 2024-03 | 2026-06 | 2024-09 | 2024-06 | 2022-10 |
 
 ² Includes `rule` and `blacklist`, which Auth0 has deprecated in favour of Actions.
 ³ Retries internally and sleeps the calling process, rather than handing the delay back to you.
 ⁴ Treats a token as valid until five seconds *past* its stated expiry.
-⁵ Depend on it from git — see [Installation](#installation).
 
 ### Which to use
 

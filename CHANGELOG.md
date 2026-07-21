@@ -105,7 +105,7 @@ Endpoints Auth0 has deprecated or retired are not supported.
 
 ```elixir
 # mix.exs
-{:auth0_client, github: "tristanperalta/auth0_client"}
+{:auth0_client, "~> 1.0"}
 ```
 
 ```sh

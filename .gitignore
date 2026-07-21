@@ -21,3 +21,6 @@ runner
 
 # Dialyzer PLTs.
 /priv/plts
+
+# Hex package artifacts built by "mix hex.build".
+*.tar

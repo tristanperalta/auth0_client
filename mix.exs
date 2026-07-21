@@ -15,7 +15,8 @@ defmodule Auth0Client.Mixfile do
       aliases: aliases(),
       deps: deps(),
       package: package(),
-      description: "An elixir client library for Auth0",
+      description:
+        "An Elixir client for the Auth0 Management and Authentication APIs, built on Req.",
       source_url: @source_url,
       docs: docs(),
       dialyzer: [
@@ -71,7 +72,23 @@ defmodule Auth0Client.Mixfile do
         "Samar Acharya"
       ],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url}
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/main/CHANGELOG.md",
+        "Roadmap" => "#{@source_url}/blob/main/ROADMAP.md"
+      },
+      # Explicit, because the default list includes priv/ — which holds the dialyzer
+      # PLTs, and would ship a 4 MB build artifact in a 200 KB package.
+      files: [
+        "lib",
+        "guides",
+        "mix.exs",
+        "README.md",
+        "CHANGELOG.md",
+        "ROADMAP.md",
+        "LICENSE",
+        ".formatter.exs"
+      ]
     ]
   end
 
