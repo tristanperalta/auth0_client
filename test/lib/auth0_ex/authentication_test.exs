@@ -87,7 +87,7 @@ defmodule Auth0Ex.AuthenticationTest do
   end
 
   describe "userinfo/1" do
-    test "gets userinfo with the access token as a query param" do
+    test "sends the access token as a bearer header, not a query param" do
       stub_request(%{"sub" => "auth0|abc123"})
 
       assert {:ok, %{"sub" => "auth0|abc123"}} = Authentication.userinfo("an_access_token")
@@ -95,29 +95,26 @@ defmodule Auth0Ex.AuthenticationTest do
       request = assert_receive_request()
       assert request.method == "GET"
       assert request.path == "/userinfo"
-      assert request.query == %{"access_token" => "an_access_token"}
       assert request.body == ""
+      assert {"authorization", "Bearer an_access_token"} in request.headers
     end
-  end
 
-  describe "tokeninfo/1" do
-    test "posts the id token to the legacy tokeninfo endpoint" do
+    test "does not leak the token into the query string" do
       stub_request(%{"sub" => "auth0|abc123"})
 
-      assert {:ok, %{"sub" => "auth0|abc123"}} = Authentication.tokeninfo("an_id_token")
+      assert {:ok, _} = Authentication.userinfo("an_access_token")
 
       request = assert_receive_request()
-      assert request.method == "POST"
-      assert request.path == "/tokeninfo"
-      assert request.body == %{"id_token" => "an_id_token"}
+      assert request.query_string == ""
+      refute request.query_string =~ "an_access_token"
     end
   end
 
   describe "authorization" do
-    test "sends no authorization header" do
-      stub_request(%{"sub" => "auth0|abc123"})
+    test "sends no authorization header when the caller supplies no token" do
+      stub_request(%{"_id" => "1"})
 
-      assert {:ok, _} = Authentication.userinfo("an_access_token")
+      assert {:ok, _} = Authentication.change_password("a_client_id", "a@b.com", "a_connection")
 
       headers = assert_receive_request().headers
       refute List.keymember?(headers, "authorization", 0)
@@ -126,9 +123,9 @@ defmodule Auth0Ex.AuthenticationTest do
 
   describe "paths" do
     test "hang off the tenant root with no /api/v2 prefix" do
-      stub_request(%{"sub" => "auth0|abc123"})
+      stub_request(%{"_id" => "1"})
 
-      assert {:ok, _} = Authentication.tokeninfo("an_id_token")
+      assert {:ok, _} = Authentication.change_password("a_client_id", "a@b.com", "a_connection")
 
       refute assert_receive_request().path =~ "/api/v2"
     end

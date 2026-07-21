@@ -17,34 +17,40 @@ defmodule Auth0Ex.Authentication.Token do
       iex> Auth0Ex.Authentication.Token.auth_code("client_id", "client_secret", "code", "redirect_uri_here")
   """
   def auth_code(client_id, client_secret, code, redirect_uri \\ nil) do
-    payload = %{
+    %{
       client_id: client_id,
       client_secret: client_secret,
       code: code,
       redirect_uri: redirect_uri,
       grant_type: "authorization_code"
     }
-
-    do_post(@path, payload)
+    |> post_token()
   end
 
   @doc """
-  This is the OAuth 2.0 grant that mobile apps utilize in order to
+  This is the OAuth 2.0 grant that mobile and single-page apps utilize in order to
   access an API. Use this endpoint to exchange an Authorization Code for a Token.
-      iex> Auth0Ex.Authentication.Token.auth_code_pkce("client_id", "client_secret", "code", "code_verifier")
-      iex> Auth0Ex.Authentication.Token.auth_code_pkce("client_id", "client_secret", "code", "code_verifier", "redirect_uri_here")
+
+  PKCE exists for public clients, which have no client secret, so none is sent by
+  default. `opts` may carry `:redirect_uri` (required only if it was used in the
+  `/authorize` call) and `:client_secret` (for a confidential client that also uses
+  PKCE).
+
+  https://auth0.com/docs/api/authentication/authorization-code-flow-with-pkce/get-token-pkce
+
+      iex> Auth0Ex.Authentication.Token.auth_code_pkce("client_id", "code", "code_verifier")
+      iex> Auth0Ex.Authentication.Token.auth_code_pkce("client_id", "code", "code_verifier", %{redirect_uri: "redirect_uri_here"})
   """
-  def auth_code_pkce(client_id, client_secret, code, code_verifier, redirect_uri \\ nil) do
-    payload = %{
+  def auth_code_pkce(client_id, code, code_verifier, opts \\ %{}) when is_map(opts) do
+    %{
       client_id: client_id,
-      client_secret: client_secret,
       code: code,
       code_verifier: code_verifier,
-      redirect_uri: redirect_uri,
+      redirect_uri: Map.get(opts, :redirect_uri),
+      client_secret: Map.get(opts, :client_secret),
       grant_type: "authorization_code"
     }
-
-    do_post(@path, payload)
+    |> post_token()
   end
 
   @doc """
@@ -55,13 +61,21 @@ defmodule Auth0Ex.Authentication.Token do
       iex> Auth0Ex.Authentication.Token.client_credentials("client_id", "client_secret", "API_IDENTIFIER_aud")
   """
   def client_credentials(client_id, client_secret, audience) do
-    payload = %{
+    %{
       client_id: client_id,
       client_secret: client_secret,
       audience: audience,
       grant_type: "client_credentials"
     }
+    |> post_token()
+  end
 
-    do_post(@path, payload)
+  # Optional parameters default to nil here rather than being absent, which is an
+  # artifact of this module's own signatures. Drop them so the request omits the
+  # key entirely instead of sending an explicit JSON null.
+  defp post_token(payload) do
+    payload
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
+    |> then(&do_post(@path, &1))
   end
 end

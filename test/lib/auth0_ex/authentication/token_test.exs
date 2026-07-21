@@ -5,7 +5,7 @@ defmodule Auth0Ex.Authentication.TokenTest do
   alias Auth0Ex.Authentication.Token
 
   describe "auth_code/3,4" do
-    test "posts the authorization code grant with a nil redirect_uri by default" do
+    test "omits redirect_uri entirely when it is not given" do
       stub_request(%{"access_token" => "a_token"})
 
       assert {:ok, %{"access_token" => "a_token"}} =
@@ -19,9 +19,10 @@ defmodule Auth0Ex.Authentication.TokenTest do
                "client_id" => "an_id",
                "client_secret" => "a_secret",
                "code" => "a_code",
-               "redirect_uri" => nil,
                "grant_type" => "authorization_code"
              }
+
+      refute Map.has_key?(request.body, "redirect_uri")
     end
 
     test "posts the given redirect_uri" do
@@ -44,12 +45,12 @@ defmodule Auth0Ex.Authentication.TokenTest do
     end
   end
 
-  describe "auth_code_pkce/4,5" do
-    test "posts the code verifier with a nil redirect_uri by default" do
+  describe "auth_code_pkce/3,4" do
+    test "sends no client secret for a public client" do
       stub_request(%{"access_token" => "a_token"})
 
       assert {:ok, %{"access_token" => "a_token"}} =
-               Token.auth_code_pkce("an_id", "a_secret", "a_code", "a_verifier")
+               Token.auth_code_pkce("an_id", "a_code", "a_verifier")
 
       request = assert_receive_request()
       assert request.method == "POST"
@@ -57,34 +58,45 @@ defmodule Auth0Ex.Authentication.TokenTest do
 
       assert request.body == %{
                "client_id" => "an_id",
-               "client_secret" => "a_secret",
                "code" => "a_code",
                "code_verifier" => "a_verifier",
-               "redirect_uri" => nil,
                "grant_type" => "authorization_code"
              }
+
+      refute Map.has_key?(request.body, "client_secret")
+      refute Map.has_key?(request.body, "redirect_uri")
     end
 
-    test "posts the given redirect_uri" do
+    test "posts a redirect_uri given in opts" do
       stub_request(%{"access_token" => "a_token"})
 
       assert {:ok, _} =
-               Token.auth_code_pkce(
-                 "an_id",
-                 "a_secret",
-                 "a_code",
-                 "a_verifier",
-                 "https://example.com/callback"
-               )
+               Token.auth_code_pkce("an_id", "a_code", "a_verifier", %{
+                 redirect_uri: "https://example.com/callback"
+               })
 
       request = assert_receive_request()
 
       assert request.body == %{
                "client_id" => "an_id",
-               "client_secret" => "a_secret",
                "code" => "a_code",
                "code_verifier" => "a_verifier",
                "redirect_uri" => "https://example.com/callback",
+               "grant_type" => "authorization_code"
+             }
+    end
+
+    test "posts a client_secret given in opts for a confidential client" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, _} =
+               Token.auth_code_pkce("an_id", "a_code", "a_verifier", %{client_secret: "a_secret"})
+
+      assert assert_receive_request().body == %{
+               "client_id" => "an_id",
+               "code" => "a_code",
+               "code_verifier" => "a_verifier",
+               "client_secret" => "a_secret",
                "grant_type" => "authorization_code"
              }
     end

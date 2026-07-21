@@ -61,19 +61,14 @@ defmodule Auth0Ex.Authentication do
   Given the Auth0 access token obtained during login, this endpoint returns a user's profile.
   This endpoint will work only if `openid` was granted as a scope for the `access_token`.
 
+  The token is sent as a bearer header. Auth0 documents no query-parameter form, and a
+  token in a query string leaks into access logs.
+
+  https://auth0.com/docs/api/authentication/user-profile/get-user-info
+
       iex> Auth0Ex.Authentication.userinfo("sample.access_token.here")
   """
   def userinfo(access_token) do
-    do_get("userinfo", %{access_token: access_token})
-  end
-
-  @doc """
-  This endpoint validates a JSON Web Token (signature and expiration) and returns the
-  user information associated with the user id sub property of the token.
-
-      iex> Auth0Ex.Authentication.tokeninfo("sample.id_token.here")
-  """
-  def tokeninfo(id_token) do
-    do_post("tokeninfo", %{id_token: id_token})
+    do_get("userinfo", %{}, [{"Authorization", "Bearer #{access_token}"}])
   end
 end

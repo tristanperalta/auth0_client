@@ -54,7 +54,7 @@ defmodule Auth0Ex.Management.UserTest do
       request = assert_receive_request()
       assert request.method == "GET"
       assert request.path == "/api/v2/users/auth0|123"
-      assert request.query == %{"search_engine" => "v3"}
+      assert request.query == %{}
     end
 
     test "passes through params" do
@@ -62,10 +62,7 @@ defmodule Auth0Ex.Management.UserTest do
 
       assert {:ok, _} = User.get("auth0|123", %{fields: "email,name,username"})
 
-      assert assert_receive_request().query == %{
-               "fields" => "email,name,username",
-               "search_engine" => "v3"
-             }
+      assert assert_receive_request().query == %{"fields" => "email,name,username"}
     end
   end
 
@@ -142,7 +139,7 @@ defmodule Auth0Ex.Management.UserTest do
       request = assert_receive_request()
       assert request.method == "GET"
       assert request.path == "/api/v2/users/auth0|233423/logs"
-      assert request.query == %{"search_engine" => "v3"}
+      assert request.query == %{}
     end
 
     test "accepts a keyword list of params" do
@@ -150,11 +147,7 @@ defmodule Auth0Ex.Management.UserTest do
 
       assert {:ok, []} = User.log("auth0|23423", page: 2, per_page: 10)
 
-      assert assert_receive_request().query == %{
-               "page" => "2",
-               "per_page" => "10",
-               "search_engine" => "v3"
-             }
+      assert assert_receive_request().query == %{"page" => "2", "per_page" => "10"}
     end
   end
 
@@ -167,7 +160,7 @@ defmodule Auth0Ex.Management.UserTest do
       request = assert_receive_request()
       assert request.method == "GET"
       assert request.path == "/api/v2/users/auth0|234/enrollments"
-      assert request.query == %{"search_engine" => "v3"}
+      assert request.query == %{}
     end
   end
 
@@ -249,7 +242,7 @@ defmodule Auth0Ex.Management.UserTest do
       request = assert_receive_request()
       assert request.method == "GET"
       assert request.path == "/api/v2/users/auth0|23423/roles"
-      assert request.query == %{"search_engine" => "v3"}
+      assert request.query == %{}
     end
 
     test "passes through params" do
@@ -257,10 +250,7 @@ defmodule Auth0Ex.Management.UserTest do
 
       assert {:ok, []} = User.roles("auth0|23423", %{per_page: 5})
 
-      assert assert_receive_request().query == %{
-               "per_page" => "5",
-               "search_engine" => "v3"
-             }
+      assert assert_receive_request().query == %{"per_page" => "5"}
     end
   end
 

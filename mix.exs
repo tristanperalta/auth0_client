@@ -12,6 +12,7 @@ defmodule Auth0Ex.Mixfile do
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
+      aliases: aliases(),
       deps: deps(),
       package: package(),
       description: "An elixir client library for Auth0",
@@ -19,7 +20,26 @@ defmodule Auth0Ex.Mixfile do
       docs: docs(),
       dialyzer: [
         plt_add_apps: [:mix, :ex_unit],
-        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+        # Keyed by env so a `precommit` run (test) and CI's dialyzer job (dev)
+        # do not rebuild each other's PLT.
+        plt_file: {:no_warn, "priv/plts/dialyzer-#{Mix.env()}.plt"}
+      ]
+    ]
+  end
+
+  def cli do
+    [preferred_envs: [precommit: :test]]
+  end
+
+  defp aliases do
+    [
+      precommit: [
+        "compile --warnings-as-errors",
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "credo --strict --all",
+        "test",
+        "dialyzer"
       ]
     ]
   end

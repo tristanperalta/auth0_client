@@ -66,9 +66,26 @@ config :auth0_ex,
   ]
 ```
 
+### Error handling
+
+Every API function returns one of:
+
+```elixir
+{:ok, body}                      # 200/201, body decoded from JSON
+:ok                              # 204 No Content
+{:error, body, status_code}      # any other status, body decoded
+{:error, %{reason: reason}}      # transport failure, or no management token
+```
+
+Management calls need a token before they can be made. If fetching one fails — bad credentials, a
+rate-limited tenant, an unreachable network — the call returns `{:error, %{reason: reason}}` without ever
+reaching the endpoint you asked for. `reason` is `:token_fetch_failed` (with `:status` and `:body`),
+`:missing_access_token`, `:malformed_token`, or the underlying transport reason.
+
 ### Notes
 
-- The v2 `search_engine` API is being deprecated by Auth0. User queries now specify `search_engine=v3` by default. If for some reason you need the `v2` engine you can set `v2_search: true` in your config block.
+- `Auth0Ex.Management.User.all/1` defaults to `search_engine=v3`, the only engine Auth0 still supports. Pass
+  an explicit `search_engine` to override it.
 - if you use pre-created management token, it will always be used for your requests.
 - `AUTH0_DOMAIN` should be entire tenant domain Auth0 provides. We fall back to adding `auth0.com` right now but that will be removed in future version. This allows us to use `Auth0Ex` in all tenant regions unlike the previous versions.
 - If you don't want `auth0.com` to be added, you can set `config :auth0_ex, custom_domain: true`
@@ -80,7 +97,11 @@ Please refer to the [documentation](https://hexdocs.pm/auth0_ex/) for more detai
 ### API coverage
 
 This library covers a subset of the Auth0 API, and does not support endpoints Auth0 has deprecated or
-retired. See [ROADMAP.md](ROADMAP.md) for what is implemented, what is missing, and what is being removed.
+retired. See [ROADMAP.md](ROADMAP.md) for what is implemented and what is missing.
+
+Already removed on those grounds: `Auth0Ex.Management.Rule` (end-of-life 2026-11-18, superseded by
+Actions), `Auth0Ex.Management.Blacklist`, the whole `Auth0Ex.Authentication.Login` module
+(`/oauth/ro` and `/oauth/access_token`), and `Auth0Ex.Authentication.tokeninfo/1` (use `userinfo/1`).
 
 ### Authentication API
 

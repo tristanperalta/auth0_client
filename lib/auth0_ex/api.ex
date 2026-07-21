@@ -28,6 +28,11 @@ defmodule Auth0Ex.Api do
         do_get(path, Enum.into(params, %{}))
       end
 
+      @doc false
+      def do_get(path, params, extra_headers) when is_list(extra_headers) do
+        do_request(:get, path, Enum.into(params, %{}), "", extra_headers)
+      end
+
       def do_post(path, body \\ %{})
 
       @doc false
@@ -38,6 +43,11 @@ defmodule Auth0Ex.Api do
       @doc false
       def do_post(path, body) do
         do_request(:post, path, %{}, Jason.encode!(body))
+      end
+
+      @doc false
+      def do_post(path, body, extra_headers) when is_list(extra_headers) do
+        do_request(:post, path, %{}, Jason.encode!(body), extra_headers)
       end
 
       @doc false
@@ -67,16 +77,20 @@ defmodule Auth0Ex.Api do
         do_request(:delete, path, params)
       end
 
-      defp do_request(method, path, params \\ %{}, req_body \\ "") do
-        [
-          method: method,
-          url: build_url(path, params),
-          headers: req_header(unquote(opts[:for])),
-          body: req_body
-        ]
-        |> Keyword.merge(http_opts())
-        |> Req.request()
-        |> Parser.parse()
+      # A management request needs a token before it can build headers, so header
+      # construction may fail. `with` passes that error straight through.
+      defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do
+        with {:ok, headers} <- request_headers(unquote(opts[:for]), extra_headers) do
+          [
+            method: method,
+            url: build_url(path, params),
+            headers: headers,
+            body: req_body
+          ]
+          |> Keyword.merge(http_opts())
+          |> Req.request()
+          |> Parser.parse()
+        end
       end
 
       defp query_string(params) do

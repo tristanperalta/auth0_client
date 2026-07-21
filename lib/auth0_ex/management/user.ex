@@ -9,11 +9,17 @@ defmodule Auth0Ex.Management.User do
   @doc """
   Gets all the users
 
+  Defaults to the v3 search engine, which is the only one Auth0 still supports. Pass
+  an explicit `search_engine` to override it.
+
       iex> Auth0Ex.Management.User.all()
       iex> Auth0Ex.Management.User.all(fields: "name", q: "app_metadata.admin:'true'")
   """
   def all(params \\ %{}) when is_map(params) or is_list(params) do
-    do_get(@path, params)
+    params
+    |> Enum.into(%{})
+    |> Map.put_new(:search_engine, "v3")
+    |> then(&do_get(@path, &1))
   end
 
   @doc """
@@ -123,16 +129,5 @@ defmodule Auth0Ex.Management.User do
   """
   def delete_authentication_methods(user_id) do
     do_delete("#{@path}/#{user_id}/authentication-methods")
-  end
-
-  @doc false
-  defp default_params do
-    case Application.get_env(:auth0_ex, :v2_search) do
-      true ->
-        %{}
-
-      _ ->
-        %{search_engine: "v3"}
-    end
   end
 end

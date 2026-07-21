@@ -7,6 +7,7 @@ defmodule Auth0Ex.ApiTest do
     use Auth0Ex.Api, for: :mgmt
 
     def get_it(path, params \\ %{}), do: do_get(path, params)
+    def get_it(path, params, headers), do: do_get(path, params, headers)
     def post_it(path, body \\ %{}), do: do_post(path, body)
     def put_it(path, body \\ %{}), do: do_put(path, body)
     def patch_it(path, body \\ %{}), do: do_patch(path, body)
@@ -19,6 +20,8 @@ defmodule Auth0Ex.ApiTest do
     use Auth0Ex.Api
 
     def get_it(path, params \\ %{}), do: do_get(path, params)
+    def get_it(path, params, headers), do: do_get(path, params, headers)
+    def post_it(path, body, headers), do: do_post(path, body, headers)
   end
 
   defmodule DefaultParamsEndpoint do
@@ -147,11 +150,11 @@ defmodule Auth0Ex.ApiTest do
 
     test "do_delete can carry query params" do
       stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
-      MgmtEndpoint.delete_it("blacklists/tokens", %{aud: "an_audience"})
+      MgmtEndpoint.delete_it("user-blocks", %{identifier: "user@example.com"})
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.query == %{"aud" => "an_audience"}
+      assert request.query == %{"identifier" => "user@example.com"}
     end
   end
 
@@ -171,6 +174,34 @@ defmodule Auth0Ex.ApiTest do
 
       headers = assert_receive_request().headers
       refute Enum.any?(headers, &match?({"authorization", _}, &1))
+    end
+  end
+
+  describe "per-request headers" do
+    test "do_get/3 merges extra headers into the defaults" do
+      stub_request(%{})
+      AuthEndpoint.get_it("userinfo", %{}, [{"Authorization", "Bearer USER_TOKEN"}])
+
+      headers = assert_receive_request().headers
+      assert {"authorization", "Bearer USER_TOKEN"} in headers
+      assert {"content-type", "application/json"} in headers
+    end
+
+    test "do_post/3 merges extra headers into the defaults" do
+      stub_request(%{})
+      AuthEndpoint.post_it("mfa/challenge", %{}, [{"Authorization", "Bearer MFA_TOKEN"}])
+
+      headers = assert_receive_request().headers
+      assert {"authorization", "Bearer MFA_TOKEN"} in headers
+    end
+
+    test "an extra authorization replaces the management token rather than duplicating it" do
+      stub_request(%{})
+      MgmtEndpoint.get_it("clients", %{}, [{"Authorization", "Bearer OVERRIDE"}])
+
+      headers = assert_receive_request().headers
+      assert Enum.count(headers, &match?({"authorization", _}, &1)) == 1
+      assert {"authorization", "Bearer OVERRIDE"} in headers
     end
   end
 

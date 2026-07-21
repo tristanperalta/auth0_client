@@ -13,73 +13,68 @@ Management API index. Absence from the OpenAPI document and from the resource na
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 55 | 451 | ~12% |
-| Authentication | 3 | ~30 | one of the three is implemented incorrectly |
+| Management v2 | 50 | 451 | ~11% |
+| Authentication | 3 | ~30 | plus 3 of ~11 `/oauth/token` grants |
 
-Management resource groups: 7 fully covered, 5 partial, 37 with no coverage at all.
+Management resource groups: 6 fully covered, 5 partial, 38 with no coverage at all.
 
-- **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `rules`, `tickets`, `user-blocks`
+- **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `tickets`, `user-blocks`
 - **Partial:** `users` 13/39, `clients` 6/14, `connections` 6/28, `client-grants` 4/6, `jobs` 1/5
 
-No implemented endpoint has a wrong path or HTTP method. The gaps are omission, not corruption.
+The count dropped from 55 because the `rules` group (5 operations) was removed rather than fixed — see §3.
+`blacklists` was never in the OpenAPI document, so removing it changes no count.
+
+No implemented endpoint has a wrong path or HTTP method, and as of the correctness pass none has a wrong
+parameter shape either.
 
 ---
 
 ## 1. Foundation
 
-`Auth0Ex.Api.do_request/4` in `lib/auth0_ex/api.ex` builds headers solely from `Utils.req_header/1`, so no
-call site can set a per-request header. That single limitation blocks the `userinfo` fix, every `/mfa/*`
-endpoint, and `auth0-forwarded-for`. Do this before adding endpoints that need it.
-
-- [ ] Per-request headers — thread an extra-headers argument through `do_request`, merging case-insensitively
-      so a per-call `Authorization` replaces the default rather than being sent alongside it
-- [ ] Prune nil-valued keys before `Jason.encode!` so optional params can genuinely be omitted, rather than
-      being sent as explicit JSON `null`
+- [x] Per-request headers — `Utils.request_headers/2` merges caller-supplied headers over the defaults,
+      case-insensitively, so a per-call `Authorization` replaces the default rather than being sent
+      alongside it. `do_get/3` and `do_post/3` expose it
+- [x] Omit nil-valued optional parameters instead of sending explicit JSON `null`. **Scoped deliberately**
+      to payloads this library constructs with optional defaults (`Token.auth_code/4`,
+      `auth_code_pkce/4`). A blanket transform in `do_post`/`do_patch` would break Management PATCH calls,
+      where an explicit `null` is how you *clear* a field
 - [ ] Optional form-encoded bodies for `/oauth/token`. Auth0's samples use
       `application/x-www-form-urlencoded`; the library always sends JSON. Auth0 appears to accept JSON, so
       this is a risk to close, not a known break
 - [ ] URL-only builders for endpoints that are browser redirects rather than calls the library should make
-      (`/authorize`, logout)
+      (`/authorize`, logout) — belongs with the P0 work in §4
 
 ## 2. Known-broken
 
-- [ ] **`Authentication.userinfo/1` sends the token in the query string.** Auth0 documents only the
-      `Authorization: Bearer` header form; no `access_token` query parameter appears in the current
-      reference. Also leaks the token into access logs. Blocked on per-request headers.
+- [x] **`Authentication.userinfo/1` sent the token in the query string.** Now sent as
+      `Authorization: Bearer`, the only form Auth0 documents, which also keeps it out of access logs.
       [Docs](https://auth0.com/docs/api/authentication/user-profile/get-user-info)
-- [ ] **`Token.auth_code_pkce/5` requires `client_secret`.** PKCE exists for public clients, which have no
-      secret, and the parameter is not documented for that exchange. The current signature makes it a
-      required positional argument with no way to omit it.
+- [x] **`Token.auth_code_pkce/5` required `client_secret`.** Now `auth_code_pkce/4`:
+      `(client_id, code, code_verifier, opts)`, where `opts` may carry `:redirect_uri` and, for a
+      confidential client, `:client_secret`.
       [Docs](https://auth0.com/docs/api/authentication/authorization-code-flow-with-pkce/get-token-pkce)
-- [ ] **`User.default_params/0` appends `search_engine=v3` to every call**, including POST, PATCH and DELETE,
-      where it is undocumented. It should apply to searches only (the `:v2_search` flag it branches on is
-      itself slated for removal — see §3)
-- [ ] **`Utils.fetch_mgmt_token/0` raises on any non-success response.** It strict-matches
-      `{:ok, %{"access_token" => token}}`, so a 429, a 401 or a timeout on `/oauth/token` raises
-      `MatchError` rather than returning an error tuple. The token cache bounds the blast radius to cold
-      start and post-expiry, which is exactly when a tenant is most likely to be rate-limiting
+- [x] **`search_engine=v3` leaked onto every User call.** Now applied in `User.all/1` only, via
+      `Map.put_new/3`, so an explicit `search_engine` still wins
+- [x] **`Utils.fetch_mgmt_token/0` raised on any non-success response.** `mgmt_token/0` now returns
+      `{:ok, token} | {:error, reason}`, header construction is fallible, and `do_request` short-circuits.
+      A management call against a rate-limited tenant returns `{:error, %{reason: :token_fetch_failed,
+      status: 429, body: _}}` and never reaches the endpoint
 
 ## 3. Removals
 
-This library does not support endpoints Auth0 has deprecated or retired. The surface below is dead code on
-modern tenants and is to be removed, not maintained.
+This library does not support endpoints Auth0 has deprecated or retired.
 
-- [ ] **`Auth0Ex.Management.Rule`** — deprecated 2023-05-16, read-only since 2024-11-18, **end-of-life
-      2026-11-18**. `Rule.create/1` and `Rule.update/2` already fail on live tenants. `Action` is the
-      replacement (§5)
+- [x] **`Auth0Ex.Management.Rule`** — deprecated 2023-05-16, read-only since 2024-11-18, end-of-life
+      2026-11-18. `Action` is the replacement (§5)
       [Lifecycle](https://auth0.com/docs/troubleshoot/product-lifecycle/deprecations-and-migrations)
-- [ ] **`Login.database/6`** (`POST /oauth/ro`, deprecated 2017-07-08) — superseded by the Resource Owner
-      Password grant (§4)
-- [ ] **`Login.social/4`** (`POST /oauth/access_token`) — superseded by `GET /authorize`, or native social
-      token exchange for mobile
-- [ ] **`Authentication.tokeninfo/1`** (`POST /tokeninfo`) — superseded by `GET /userinfo`
-- [ ] **`Auth0Ex.Management.Blacklist`** — `/blacklists/tokens` has no entry in the OpenAPI document and no
-      page in the docs nav. Whether it still functions is unverified
-- [ ] **The `:v2_search` config flag** — search v2 was retired 2019-06-30, so the flag selects an engine that
-      no longer exists (see §2)
-
-Removing `Rule` and `Blacklist` drops two of the seven "fully covered" resource groups, which lowers the
-headline coverage number while making the library more correct.
+- [x] **The whole `Auth0Ex.Authentication.Login` module** — `database/6` (`POST /oauth/ro`, deprecated
+      2017-07-08) and `social/4` (`POST /oauth/access_token`) were its only two functions. Replacements are
+      the Resource Owner Password grant and `GET /authorize` respectively, both in §4
+- [x] **`Authentication.tokeninfo/1`** (`POST /tokeninfo`) — superseded by `GET /userinfo`
+- [x] **`Auth0Ex.Management.Blacklist`** — `/blacklists/tokens` has no entry in the OpenAPI document and no
+      page in the docs nav
+- [x] **The `:v2_search` config flag** — search v2 was retired 2019-06-30, so the flag selected an engine
+      that no longer exists
 
 ## 4. Authentication API
 
@@ -88,8 +83,9 @@ The library implements 3 of ~11 `/oauth/token` grants and 3 of ~30 documented op
 **P0**
 
 - [ ] `refresh_token` grant — [docs](https://auth0.com/docs/api/authentication/refresh-token/refresh-token)
-- [ ] Resource Owner Password grant (`password` / `password-realm`) — the actual replacement for
-      `Login.database/6` — [docs](https://auth0.com/docs/api/authentication/resource-owner-password-flow/get-token)
+- [ ] Resource Owner Password grant (`password` / `password-realm`) — the replacement for the removed
+      `Login.database/6`, so there is currently no password-grant path at all
+      — [docs](https://auth0.com/docs/api/authentication/resource-owner-password-flow/get-token)
 - [ ] `POST /oauth/revoke` — [docs](https://auth0.com/docs/api/authentication/revoke-refresh-token/revoke-refresh-token)
 - [ ] `GET /authorize` URL builder — [docs](https://auth0.com/docs/api/authentication/authorization-code-flow/authorize-application)
 - [ ] Logout URL builders: `GET /v2/logout`, `GET|POST /oidc/logout`
