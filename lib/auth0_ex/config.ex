@@ -35,6 +35,17 @@ defmodule Auth0Ex.Config do
     Application.get_env(:auth0_ex, :http_opts) || []
   end
 
+  @doc """
+  How many seconds before its expiry a cached management token is refreshed.
+
+  A token that expires while a request is in flight is rejected, so it is renewed
+  slightly early. Defaults to 60 seconds.
+  """
+  @spec token_refresh_skew() :: non_neg_integer
+  def token_refresh_skew do
+    Application.get_env(:auth0_ex, :token_refresh_skew, 60)
+  end
+
   @spec user_agent() :: String.t()
   def user_agent do
     Application.get_env(:auth0_ex, :user_agent) ||

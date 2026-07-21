@@ -180,16 +180,16 @@ issues; they are the things that bite under load or partial failure.
       `Auth0Ex.Error` struct carrying `reason`, `status`, `body` and `headers`, with
       `Auth0Ex.Error.retry_after/1` to read the backoff. This also collapsed the two error shapes into one,
       which was itself a source of `FunctionClauseError` in a consuming app
-- [ ] **Token expiry has no skew margin, no single-flight, and no invalidation on 401.** `Utils.expired?/1`
-      compares against `DateTime.utc_now()` exactly, so a token expiring mid-flight is used anyway; N
-      concurrent callers on a cold cache all fetch their own token; and a token rejected as expired by Auth0
-      is never evicted
-- [ ] **`TokenState` is a plain named Agent with a public `get_all/0`** holding the management JWT. Any
-      process can read it, and it will appear in a crash dump or an `inspect` of process state. Consider
-      narrowing the API or scrubbing it from error reports
+- [x] **Token expiry had no skew margin, no single-flight, and no invalidation on 401.** `TokenState` is now
+      a GenServer that owns the token: one fetch in flight at a time with all callers waiting on it,
+      renewal `Config.token_refresh_skew/0` seconds before expiry (60 by default), and a 401 on a
+      Management call evicts the token and replays the request once
+- [x] **`TokenState` exposed the management JWT** through a public `get_all/0`. The key-value API is gone —
+      only `fetch/0` and `invalidate/0` remain — and an `Inspect` implementation redacts the token so it
+      cannot reach a crash dump or a stray `inspect`
 - [ ] **`http_opts` is an unvalidated pass-through** to `Req.request/1`. A caller can disable certificate
       verification through it — `connect_options: [transport_opts: [verify: :verify_none]]` — with nothing in
-      the library flagging it. Worth documenting loudly, and possibly rejecting outright
+      the library flagging it. The README now says so; rejecting it outright is the part still open
 
 ### Settled, recorded so it is not re-litigated
 

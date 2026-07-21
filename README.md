@@ -37,8 +37,19 @@ config :auth0_ex,
   http_opts: []
 ```
 
+Tokens obtained this way are cached and renewed automatically. Only one fetch is ever in flight, so a
+cold cache under load makes one request to Auth0 rather than one per caller, and a token is renewed shortly
+before it expires — by `token_refresh_skew` seconds, 60 by default:
+
+```elixir
+config :auth0_ex, token_refresh_skew: 120
+```
+
+If Auth0 rejects a cached token with a 401 — a rotated secret, a revoked client — the token is discarded
+and the request replayed once with a fresh one, so callers do not need their own retry.
+
 Alternatively, supply a pre-created Management API token. It is used for every request as-is, and is never
-refreshed:
+refreshed or retried:
 
 ```elixir
 config :auth0_ex,

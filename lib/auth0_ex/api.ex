@@ -8,6 +8,12 @@ defmodule Auth0Ex.Api do
       use Auth0Ex.Api, for: :mgmt
   """
 
+  alias Auth0Ex.Config
+  alias Auth0Ex.Error
+  alias Auth0Ex.Parser
+  alias Auth0Ex.TokenState
+  alias Auth0Ex.Utils
+
   defmacro __using__(opts) do
     quote location: :keep do
       alias Auth0Ex.Parser
@@ -99,20 +105,14 @@ defmodule Auth0Ex.Api do
         do_request(:delete, path, %{}, Jason.encode!(body))
       end
 
-      # A management request needs a token before it can build headers, so header
-      # construction may fail. `with` passes that error straight through.
       defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do
-        with {:ok, headers} <- request_headers(unquote(opts[:for]), extra_headers) do
-          [
-            method: method,
-            url: build_url(path, params),
-            headers: headers,
-            body: req_body
-          ]
-          |> Keyword.merge(http_opts())
-          |> Req.request()
-          |> Parser.parse()
-        end
+        Auth0Ex.Api.request(
+          unquote(opts[:for]),
+          method,
+          build_url(path, params),
+          req_body,
+          extra_headers
+        )
       end
 
       defp query_string(params) do
@@ -128,4 +128,46 @@ defmodule Auth0Ex.Api do
       defoverridable default_params: 0
     end
   end
+
+  @doc """
+  Performs a request and parses the response.
+
+  Lives here rather than in the macro so there is one copy of it, and one place for
+  the 401 retry below, instead of a copy compiled into every API module.
+  """
+  @spec request(atom, atom, String.t(), iodata, list) :: Parser.response()
+  def request(tag, method, url, req_body, extra_headers) do
+    do_request(tag, method, url, req_body, extra_headers, retry_on_401?(tag))
+  end
+
+  # A management request needs a token before it can build headers, so header
+  # construction may fail. `with` passes that error straight through.
+  defp do_request(tag, method, url, req_body, extra_headers, retry?) do
+    result =
+      with {:ok, headers} <- Utils.request_headers(tag, extra_headers) do
+        [method: method, url: url, headers: headers, body: req_body]
+        |> Keyword.merge(Utils.http_opts())
+        |> Req.request()
+        |> Parser.parse()
+      end
+
+    maybe_retry(result, tag, method, url, req_body, extra_headers, retry?)
+  end
+
+  # A 401 on a management call usually means the cached token was rejected — the
+  # secret rotated, or the client was revoked. Evict it and replay once. A 401 means
+  # the request did not take effect, so replaying is safe even when it is not
+  # idempotent. `retry?` is threaded explicitly so this can never loop.
+  defp maybe_retry({:error, %Error{status: 401}}, tag, method, url, req_body, extra_headers, true) do
+    TokenState.invalidate()
+
+    do_request(tag, method, url, req_body, extra_headers, false)
+  end
+
+  defp maybe_retry(result, _tag, _method, _url, _req_body, _extra_headers, _retry?), do: result
+
+  # Only worth retrying a token this library manages. A statically configured one
+  # cannot be refreshed, so a 401 on it will keep being a 401.
+  defp retry_on_401?(:mgmt), do: not is_binary(Config.mgmt_token())
+  defp retry_on_401?(_tag), do: false
 end

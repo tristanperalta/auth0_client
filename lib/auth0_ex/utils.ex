@@ -7,7 +7,6 @@ defmodule Auth0Ex.Utils do
   an `:ok`/`:error` tuple — a tenant that rate-limits `/oauth/token` should surface
   as an error tuple from the calling API function, not as a raise.
   """
-  alias Auth0Ex.Authentication.Token
   alias Auth0Ex.Config
   alias Auth0Ex.Error
   alias Auth0Ex.TokenState
@@ -87,77 +86,16 @@ defmodule Auth0Ex.Utils do
   defp normalize_permission(permission) when is_map(permission), do: permission
 
   @doc """
-  Returns the management API token, fetching and caching one if needed.
+  Returns the management API token.
+
+  A statically configured token is used as-is and never cached; otherwise
+  `Auth0Ex.TokenState` supplies one, fetching and renewing as needed.
   """
   @spec mgmt_token() :: {:ok, String.t()} | {:error, Error.t()}
   def mgmt_token do
     case Config.mgmt_token() do
       token when is_binary(token) -> {:ok, token}
-      _ -> get_token_from_client()
+      _ -> TokenState.fetch()
     end
   end
-
-  defp get_token_from_client do
-    case TokenState.get(:mgmt_token) do
-      token when is_binary(token) ->
-        if expired?(TokenState.get(:exp)) do
-          fetch_mgmt_token()
-        else
-          {:ok, token}
-        end
-
-      _ ->
-        fetch_mgmt_token()
-    end
-  end
-
-  defp fetch_mgmt_token do
-    client_id = Config.mgmt_client_id()
-    client_secret = Config.mgmt_client_secret()
-
-    case Token.client_credentials(client_id, client_secret, base_url(:mgmt)) do
-      {:ok, %{"access_token" => token}} ->
-        cache_token(token)
-
-      {:ok, body} ->
-        {:error, Error.from_reason(:missing_access_token, body: body)}
-
-      # Never reached Auth0. The transport reason is more informative than
-      # :token_fetch_failed, so keep it.
-      {:error, %Error{status: nil} = error} ->
-        {:error, error}
-
-      # Auth0 answered, but refused. Keep its status, body and headers — a 429 here
-      # carries the Retry-After a caller needs just as much as a failed API call does.
-      {:error, %Error{} = error} ->
-        {:error, %{error | reason: :token_fetch_failed}}
-    end
-  end
-
-  defp cache_token(token) do
-    case exp_from_token(token) do
-      {:ok, exp} ->
-        TokenState.put(:mgmt_token, token)
-        TokenState.put(:exp, exp)
-        {:ok, token}
-
-      :error ->
-        {:error, Error.from_reason(:malformed_token)}
-    end
-  end
-
-  # A token Auth0 issues is a JWT whose payload carries `exp`. Anything else cannot
-  # be cached, since there is no way to know when it stops being valid.
-  defp exp_from_token(token) do
-    with [_header, payload | _] <- String.split(token, "."),
-         {:ok, json} <- Base.url_decode64(payload, padding: false),
-         {:ok, %{"exp" => exp}} <- Jason.decode(json) do
-      {:ok, exp}
-    else
-      _ -> :error
-    end
-  end
-
-  defp expired?(exp) when is_integer(exp), do: exp <= DateTime.to_unix(DateTime.utc_now())
-  defp expired?(_), do: true
 end

@@ -15,8 +15,7 @@ defmodule Auth0Ex.UtilsTest do
       http_opts: Application.get_env(:auth0_ex, :http_opts)
     }
 
-    TokenState.put(:mgmt_token, nil)
-    TokenState.put(:exp, nil)
+    TokenState.invalidate()
 
     on_exit(fn ->
       Enum.each(original, fn
@@ -24,8 +23,7 @@ defmodule Auth0Ex.UtilsTest do
         {key, value} -> Application.put_env(:auth0_ex, key, value)
       end)
 
-      TokenState.put(:mgmt_token, nil)
-      TokenState.put(:exp, nil)
+      TokenState.invalidate()
     end)
 
     :ok
@@ -170,119 +168,42 @@ defmodule Auth0Ex.UtilsTest do
     end
   end
 
-  describe "mgmt_token/0 with a statically configured token" do
-    test "returns the configured token without any http call" do
+  # Fetching and caching live in Auth0Ex.TokenState; see its test for that
+  # behaviour. Utils only decides where a token comes from.
+  describe "mgmt_token/0" do
+    test "returns a statically configured token without any http call" do
       Application.put_env(:auth0_ex, :mgmt_token, "STATIC")
 
       assert {:ok, "STATIC"} == Utils.mgmt_token()
       refute_receive {:request, _}
     end
 
-    test "does not populate the token cache" do
+    test "a statically configured token is never cached" do
       Application.put_env(:auth0_ex, :mgmt_token, "STATIC")
       Utils.mgmt_token()
 
-      assert nil == TokenState.get(:mgmt_token)
-    end
-  end
-
-  describe "mgmt_token/0 with client credentials" do
-    setup do
+      # Nothing was cached, so with the static token removed there is nothing to
+      # fall back on and a fetch has to happen.
       Application.delete_env(:auth0_ex, :mgmt_token)
       Application.put_env(:auth0_ex, :mgmt_client_id, "a_client_id")
       Application.put_env(:auth0_ex, :mgmt_client_secret, "a_client_secret")
-      :ok
+
+      fresh = build_jwt(unix_from_now(3600))
+      stub_request(%{"access_token" => fresh})
+
+      assert {:ok, ^fresh} = Utils.mgmt_token()
     end
 
-    test "fetches a token when the cache is empty" do
+    test "delegates to the token cache when no static token is configured" do
+      Application.delete_env(:auth0_ex, :mgmt_token)
+      Application.put_env(:auth0_ex, :mgmt_client_id, "a_client_id")
+      Application.put_env(:auth0_ex, :mgmt_client_secret, "a_client_secret")
+
       token = build_jwt(unix_from_now(3600))
       stub_request(%{"access_token" => token})
 
       assert {:ok, ^token} = Utils.mgmt_token()
-
-      request = assert_receive_request()
-      assert request.method == "POST"
-      assert request.path == "/oauth/token"
-
-      assert request.body == %{
-               "client_id" => "a_client_id",
-               "client_secret" => "a_client_secret",
-               "audience" => "https://brighterlink.auth0.com/api/v2/",
-               "grant_type" => "client_credentials"
-             }
-    end
-
-    test "caches the token and its expiry" do
-      exp = unix_from_now(3600)
-      token = build_jwt(exp)
-      stub_request(%{"access_token" => token})
-
-      Utils.mgmt_token()
-
-      assert token == TokenState.get(:mgmt_token)
-      assert exp == TokenState.get(:exp)
-    end
-
-    test "reuses a cached token that has not expired" do
-      TokenState.put(:mgmt_token, "cached_token")
-      TokenState.put(:exp, unix_from_now(3600))
-
-      assert {:ok, "cached_token"} == Utils.mgmt_token()
-      refute_receive {:request, _}
-    end
-
-    test "refetches when the cached token has expired" do
-      TokenState.put(:mgmt_token, "stale_token")
-      TokenState.put(:exp, unix_from_now(-10))
-
-      fresh = build_jwt(unix_from_now(3600))
-      stub_request(%{"access_token" => fresh})
-
-      assert {:ok, ^fresh} = Utils.mgmt_token()
-      assert fresh == TokenState.get(:mgmt_token)
-    end
-
-    test "refetches when a cached token has no recorded expiry" do
-      TokenState.put(:mgmt_token, "cached_token")
-      TokenState.put(:exp, nil)
-
-      fresh = build_jwt(unix_from_now(3600))
-      stub_request(%{"access_token" => fresh})
-
-      assert {:ok, ^fresh} = Utils.mgmt_token()
-    end
-
-    test "returns an error when the token response has no access_token" do
-      stub_request(%{"error" => "access_denied"})
-
-      assert {:error, %{reason: :missing_access_token, body: %{"error" => "access_denied"}}} =
-               Utils.mgmt_token()
-    end
-
-    test "returns an error when Auth0 rejects the credentials" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(401) |> Req.Test.json(%{"error" => "access_denied"})
-      end)
-
-      assert {:error, %{reason: :token_fetch_failed, status: 401, body: body}} =
-               Utils.mgmt_token()
-
-      assert body == %{"error" => "access_denied"}
-    end
-
-    test "returns an error when the token request fails at the transport level" do
-      Req.Test.stub(Auth0Ex.Api, fn conn ->
-        Req.Test.transport_error(conn, :econnrefused)
-      end)
-
-      assert {:error, %{reason: :econnrefused}} = Utils.mgmt_token()
-    end
-
-    test "returns an error when the issued token is not a decodable JWT" do
-      stub_request(%{"access_token" => "not-a-jwt"})
-
-      assert {:error, %{reason: :malformed_token}} = Utils.mgmt_token()
-      assert nil == TokenState.get(:mgmt_token)
+      assert assert_receive_request().path == "/oauth/token"
     end
   end
 end
