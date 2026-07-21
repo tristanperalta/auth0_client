@@ -77,7 +77,59 @@ defmodule Auth0Ex.Mixfile do
 
   defp docs do
     [
-      extras: ["README.md"],
+      main: "readme",
+      extras: [
+        "README.md",
+        "guides/configuration.md",
+        "guides/login.md",
+        "guides/mfa.md",
+        "guides/users.md",
+        "guides/rbac.md",
+        "guides/organizations.md",
+        "guides/actions.md",
+        "guides/error-handling.md",
+        "ROADMAP.md"
+      ],
+      groups_for_extras: [
+        Guides: ~r/guides\//,
+        Project: ~r/ROADMAP/
+      ],
+      groups_for_modules: [
+        "Authentication API": [
+          Auth0Ex.Authentication,
+          Auth0Ex.Authentication.Mfa,
+          Auth0Ex.Authentication.Token,
+          Auth0Ex.Authentication.Url
+        ],
+        "Management API": [
+          Auth0Ex.Management.Action,
+          Auth0Ex.Management.Client,
+          Auth0Ex.Management.ClientGrant,
+          Auth0Ex.Management.Connection,
+          Auth0Ex.Management.DeviceCredential,
+          Auth0Ex.Management.EmailProvider,
+          Auth0Ex.Management.Guardian,
+          Auth0Ex.Management.Job,
+          Auth0Ex.Management.Log,
+          Auth0Ex.Management.Organization,
+          Auth0Ex.Management.ResourceServer,
+          Auth0Ex.Management.Role,
+          Auth0Ex.Management.Ticket,
+          Auth0Ex.Management.User,
+          Auth0Ex.Management.UserBlock
+        ],
+        Core: [
+          Auth0Ex,
+          Auth0Ex.Config,
+          Auth0Ex.Error
+        ],
+        Internals: [
+          Auth0Ex.Api,
+          Auth0Ex.Parser,
+          Auth0Ex.TokenState,
+          Auth0Ex.Utils
+        ]
+      ],
       source_ref: "v#{@version}",
       source_url: @source_url
     ]
