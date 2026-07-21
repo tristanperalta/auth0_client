@@ -21,13 +21,13 @@ Two things that look like evidence and are not:
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 180 | 451 | ~40% |
+| Management v2 | 203 | 451 | ~45% |
 | Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
-Management resource groups: 12 fully covered, 6 partial, 31 with no coverage at all.
+Management resource groups: 14 fully covered, 6 partial, 29 with no coverage at all.
 
-- **Full:** `device-credentials`, `emails`, `grants`, `jobs`, `logs`, `resource-servers`, `roles`,
-  `tenants`, `tickets`, `user-blocks`, `users`, `users-by-email`
+- **Full:** `custom-domains`, `device-credentials`, `emails`, `grants`, `jobs`, `keys`, `logs`,
+  `resource-servers`, `roles`, `tenants`, `tickets`, `user-blocks`, `users`, `users-by-email`
 - **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24, `clients` 6/14,
   `connections` 6/28, `client-grants` 4/6
 
@@ -144,10 +144,17 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
 
 **Smaller drift, same area**
 
+These three cannot express requests Auth0 accepts. **Approach settled:** optional arguments move into an
+`opts` map, matching what Auth0 actually requires and the pattern `Token` already uses. Breaking, which is
+acceptable while nothing depends on this fork — decided so it need not be re-argued.
+
 - [ ] `change_password/3` forces `client_id` (now optional) and cannot pass `organization`
+      → `change_password(client_id, email, connection, opts)`
 - [ ] `signup/5` forces `client_id` and `email` positionally, though only `password` and `connection` are
       required — username- and phone-based connections have to pass a dummy email
+      → `signup(client_id, password, connection, opts)` with `email` in `opts`
 - [ ] `client_credentials/3` cannot pass `organization` or use Private Key JWT (`client_assertion`)
+      → `client_credentials(client_id, client_secret, audience, opts)`
 - [x] `auth0-forwarded-for` — supported on `Token.password/4` via `:forwarded_for`, so brute-force
       protection sees the end user's address rather than the server's
 
@@ -177,7 +184,13 @@ Ordered by value. Counts are endpoints in each group.
       rollback, executions, triggers and bindings. Closes the gap left by removing `Rule` in §3, ahead of
       that end-of-life date. Actions themselves are current and actively developed — none of their
       endpoints is deprecated. The 10 `/actions/modules` endpoints are deferred — see §7
-- [ ] **`CustomDomain` (9) + `Key` (14)** — production hardening and key rotation
+- [x] **`CustomDomain` (9) + `Key` (14)** — `Auth0Ex.Management.CustomDomain` and
+      `Auth0Ex.Management.Key`. Domain registration, DNS verification and default promotion; signing-key
+      rotation and revocation, encryption keys including bring-your-own-key, and custom signing keys.
+      Both groups fully covered
+
+**§5's ordered list is complete.** What remains is the next tier below, which has never been ranked
+against itself.
 
 **Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12), client credentials on `Client`
 (5), `Session` (4), `RefreshToken` (5), `Prompt`, `Branding` (23), `NetworkAcl`, `Flow`, `Form`.

@@ -44,8 +44,9 @@ Auth0Ex.Management.User.all(%{q: "email:*@example.com"})
 #=> {:ok, [%{"user_id" => "auth0|abc123", ...}]}
 ```
 
-Available resources: `Action`, `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`,
-`Guardian`, `Job`, `Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
+Available resources: `Action`, `Client`, `ClientGrant`, `Connection`, `CustomDomain`, `DeviceCredential`,
+`EmailProvider`, `Grant`, `Guardian`, `Job`, `Key`, `Log`, `Organization`, `ResourceServer`, `Role`,
+`Tenant`, `Ticket`, `User`, `UserBlock`.
 
 The Authentication API lives under `Auth0Ex.Authentication`.
 
@@ -60,6 +61,7 @@ The Authentication API lives under `Auth0Ex.Authentication`.
 | [Roles and permissions](guides/rbac.md) | RBAC, and tracing where a user's access came from |
 | [Organizations](guides/organizations.md) | B2B — members, org-scoped roles, invitations |
 | [Actions](guides/actions.md) | Extending the login flow |
+| [Custom domains and keys](guides/domains-and-keys.md) | Branded login domains, signing-key rotation |
 | [Error handling](guides/error-handling.md) | Return shapes, `Auth0Ex.Error`, rate limiting |
 
 ## API coverage
