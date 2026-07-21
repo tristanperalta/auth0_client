@@ -54,6 +54,10 @@ endpoint, and `auth0-forwarded-for`. Do this before adding endpoints that need i
 - [ ] **`User.default_params/0` appends `search_engine=v3` to every call**, including POST, PATCH and DELETE,
       where it is undocumented. It should apply to searches only (the `:v2_search` flag it branches on is
       itself slated for removal — see §3)
+- [ ] **`Utils.fetch_mgmt_token/0` raises on any non-success response.** It strict-matches
+      `{:ok, %{"access_token" => token}}`, so a 429, a 401 or a timeout on `/oauth/token` raises
+      `MatchError` rather than returning an error tuple. The token cache bounds the blast radius to cold
+      start and post-expiry, which is exactly when a tenant is most likely to be rate-limiting
 
 ## 3. Removals
 
@@ -163,3 +167,33 @@ These are correct but incomplete — worth folding into whichever module you tou
 - [ ] `Job.send_verification_email/1` defaults to an empty body, but Auth0 requires `user_id`
 - [ ] `Ticket.email_verification/2` silently overrides any `user_id` in the body
 - [ ] `build_url/2` always appends `?` even with no params
+
+## 7. Reliability and token handling
+
+Raised by a downstream dependency audit of this library (2026-07-21) and still open. None are API-parity
+issues; they are the things that bite under load or partial failure.
+
+- [ ] **`Parser` discards response headers**, so `Retry-After` is unreachable to callers even though Req now
+      retries transient failures by default. Rate-limit handling above the library is impossible without it
+- [ ] **Token expiry has no skew margin, no single-flight, and no invalidation on 401.** `Utils.expired?/1`
+      compares against `DateTime.utc_now()` exactly, so a token expiring mid-flight is used anyway; N
+      concurrent callers on a cold cache all fetch their own token; and a token rejected as expired by Auth0
+      is never evicted
+- [ ] **`TokenState` is a plain named Agent with a public `get_all/0`** holding the management JWT. Any
+      process can read it, and it will appear in a crash dump or an `inspect` of process state. Consider
+      narrowing the API or scrubbing it from error reports
+- [ ] **`http_opts` is an unvalidated pass-through** to `Req.request/1`. A caller can disable certificate
+      verification through it — `connect_options: [transport_opts: [verify: :verify_none]]` — with nothing in
+      the library flagging it. Worth documenting loudly, and possibly rejecting outright
+
+### Settled, recorded so it is not re-litigated
+
+- **TLS verification is enforced.** Re-verified on the Req/Finch path after the migration: expired,
+  hostname-mismatch and self-signed certificates are all rejected, a valid host succeeds. Trust now comes
+  from OTP's system CA store via Mint rather than `certifi` via hackney, so the pre-migration evidence chain
+  no longer applies — this is the current one
+- **The `httpoison ~> 2.2` resolver constraint is gone.** It previously blocked consumers from moving to
+  httpoison 3.0 / hackney 4.0. Dropping HTTPoison removes hackney from this library's dependency tree
+  entirely, along with the EOL 1.x advisories it carried
+- **Error bodies are now decoded maps** rather than raw JSON strings. Consumers that called `Jason.decode!/1`
+  on `{:error, body, status}` themselves must drop that call — it will raise on an already-decoded map
