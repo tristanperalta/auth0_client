@@ -13,16 +13,16 @@ Management API index. Absence from the OpenAPI document and from the resource na
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 50 | 451 | ~11% |
+| Management v2 | 73 | 451 | ~16% |
 | Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
-Management resource groups: 6 fully covered, 5 partial, 38 with no coverage at all.
+Management resource groups: 7 fully covered, 5 partial, 37 with no coverage at all.
 
-- **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `tickets`, `user-blocks`
-- **Partial:** `users` 13/39, `clients` 6/14, `connections` 6/28, `client-grants` 4/6, `jobs` 1/5
+- **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `roles`, `tickets`, `user-blocks`
+- **Partial:** `users` 23/39, `clients` 6/14, `connections` 6/28, `client-grants` 4/6, `jobs` 1/5
 
-The count dropped from 55 because the `rules` group (5 operations) was removed rather than fixed — see §3.
-`blacklists` was never in the OpenAPI document, so removing it changes no count.
+The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
+RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
 
 No implemented endpoint has a wrong path or HTTP method, and as of the correctness pass none has a wrong
 parameter shape either.
@@ -123,11 +123,12 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
 
 Ordered by value. Counts are endpoints in each group.
 
-- [ ] **`Role` (13)** — the single biggest hole. Nothing in the library can create a role or attach a
-      permission
-- [ ] **Complete `User` (26 missing)** — `POST`/`DELETE /users/{id}/roles`, the permissions endpoints,
-      authentication methods, sessions and refresh-token revocation. RBAC is currently readable but not
-      writable
+- [x] **`Role` (13 of 13)** — `Auth0Ex.Management.Role`. CRUD, permissions, users and groups. The group is
+      fully covered
+- [x] **`User` RBAC** — `assign_roles/2`, `remove_roles/2`, the permissions endpoints, `organizations/2`,
+      and the `effective-*` lookups that resolve access inherited through groups
+- [ ] **Complete `User` (16 still missing)** — authentication methods (6), sessions and refresh-token
+      revocation, and the remaining identity endpoints
 - [ ] **Complete `Job` (4 missing)** — `users-imports`, `users-exports`, `GET /jobs/{id}`, `/jobs/{id}/errors`.
       The module sends verification emails and nothing else, so bulk migration is impossible
 - [ ] **`Organization` (42)** — the largest group in the API and the backbone of B2B deployments
@@ -192,6 +193,11 @@ issues; they are the things that bite under load or partial failure.
 
 ### Settled, recorded so it is not re-litigated
 
+- **A 2xx with an empty body means `:ok`.** Auth0 answers equivalent mutations with 200, 201 or 204
+  depending on the endpoint. `Parser` collapses all three, so callers never get a meaningless `{:ok, ""}`
+  and no endpoint needs its own special case.
+- **Some endpoints take a request body on `DELETE`.** Unusual, but documented — the RBAC remove operations
+  work this way. `do_delete_body/2` exists for exactly those; `do_delete/2` still means query params.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
   `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
   `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding

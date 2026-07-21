@@ -20,6 +20,14 @@ defmodule Auth0Ex.Parser do
   Parses the response from auth0 api calls
   """
   @spec parse({:ok, Req.Response.t()} | {:error, Exception.t()}) :: response
+  # Auth0 answers a mutation that returns nothing with 200, 201 or 204 depending on
+  # the endpoint. They mean the same thing, so they get the same value here rather
+  # than leaving callers with a meaningless {:ok, ""}.
+  def parse({:ok, %Req.Response{status: status, body: body}})
+      when status in 200..299 and body in ["", nil] do
+    :ok
+  end
+
   def parse({:ok, %Req.Response{status: status, body: body}}) when status in [200, 201] do
     {:ok, body}
   end

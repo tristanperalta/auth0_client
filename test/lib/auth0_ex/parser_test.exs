@@ -27,6 +27,25 @@ defmodule Auth0Ex.ParserTest do
     test "204 discards the body and returns :ok" do
       assert :ok = Parser.parse(response(204, ""))
     end
+
+    # Auth0 answers a mutation that returns nothing with 200, 201 or 204 depending
+    # on the endpoint. Callers should not have to care which.
+    test "any 2xx with an empty body is :ok" do
+      for status <- [200, 201, 202, 204] do
+        assert :ok = Parser.parse(response(status, ""))
+        assert :ok = Parser.parse(response(status, nil))
+      end
+    end
+
+    test "a 2xx with a body is still returned, not swallowed" do
+      assert {:ok, %{"id" => "rol_1"}} = Parser.parse(response(200, %{"id" => "rol_1"}))
+      assert {:ok, [1, 2]} = Parser.parse(response(201, [1, 2]))
+      assert {:ok, "<html>"} = Parser.parse(response(200, "<html>"))
+    end
+
+    test "an empty body on a non-2xx is still an error" do
+      assert {:error, %Error{status: 404}} = Parser.parse(response(404, ""))
+    end
   end
 
   describe "error responses" do

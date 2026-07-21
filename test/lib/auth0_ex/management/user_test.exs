@@ -254,6 +254,165 @@ defmodule Auth0Ex.Management.UserTest do
     end
   end
 
+  describe "assign_roles/2" do
+    test "posts the role ids" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.assign_roles("auth0|123", ["rol_1", "rol_2"])
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/users/auth0|123/roles"
+      assert request.body == %{"roles" => ["rol_1", "rol_2"]}
+    end
+  end
+
+  describe "remove_roles/2" do
+    test "sends the role ids in the body of a DELETE" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok = User.remove_roles("auth0|123", ["rol_1"])
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/roles"
+      assert request.body == %{"roles" => ["rol_1"]}
+    end
+  end
+
+  describe "permissions/2" do
+    test "gets the user's direct permissions" do
+      stub_request([%{"permission_name" => "read:users"}])
+
+      assert {:ok, [%{"permission_name" => "read:users"}]} = User.permissions("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/permissions"
+    end
+  end
+
+  describe "assign_permissions/2" do
+    test "posts permissions given as tuples" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+
+      assert :ok =
+               User.assign_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/api/v2/users/auth0|123/permissions"
+
+      assert request.body == %{
+               "permissions" => [
+                 %{
+                   "resource_server_identifier" => "https://api.example.com",
+                   "permission_name" => "read:users"
+                 }
+               ]
+             }
+    end
+
+    test "the map form sends the same body as the tuple shorthand" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      User.assign_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
+      from_tuple = assert_receive_request().body
+
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+
+      User.assign_permissions("auth0|123", [
+        %{resource_server_identifier: "https://api.example.com", permission_name: "read:users"}
+      ])
+
+      assert assert_receive_request().body == from_tuple
+    end
+  end
+
+  describe "remove_permissions/2" do
+    test "sends the permissions in the body of a DELETE" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+
+      assert :ok =
+               User.remove_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
+
+      request = assert_receive_request()
+      assert request.method == "DELETE"
+      assert request.path == "/api/v2/users/auth0|123/permissions"
+      assert %{"permissions" => [_]} = request.body
+    end
+  end
+
+  describe "organizations/2" do
+    test "lists the user's organizations" do
+      stub_request([%{"id" => "org_1"}])
+
+      assert {:ok, [%{"id" => "org_1"}]} = User.organizations("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/organizations"
+    end
+  end
+
+  describe "effective roles and permissions" do
+    test "effective_roles/2 includes roles inherited through groups" do
+      stub_request([%{"id" => "rol_1"}])
+
+      assert {:ok, [%{"id" => "rol_1"}]} = User.effective_roles("auth0|123")
+
+      request = assert_receive_request()
+      assert request.method == "GET"
+      assert request.path == "/api/v2/users/auth0|123/effective-roles"
+    end
+
+    test "effective_roles/2 supports checkpoint pagination" do
+      stub_request([])
+      User.effective_roles("auth0|123", take: 25)
+
+      assert assert_receive_request().query == %{"take" => "25"}
+    end
+
+    test "effective_role_source_groups/2 explains where a role comes from" do
+      stub_request([])
+      User.effective_role_source_groups("auth0|123", role_id: "rol_1")
+
+      request = assert_receive_request()
+      assert request.path == "/api/v2/users/auth0|123/effective-roles/sources/groups"
+      assert request.query == %{"role_id" => "rol_1"}
+    end
+
+    test "effective_permissions/2 can be scoped to one api" do
+      stub_request([])
+
+      User.effective_permissions("auth0|123",
+        resource_server_identifier: "https://api.example.com"
+      )
+
+      request = assert_receive_request()
+      assert request.path == "/api/v2/users/auth0|123/effective-permissions"
+      assert request.query == %{"resource_server_identifier" => "https://api.example.com"}
+    end
+
+    test "effective_permission_source_roles/2 explains where a permission comes from" do
+      stub_request([])
+
+      User.effective_permission_source_roles("auth0|123",
+        resource_server_identifier: "https://api.example.com",
+        permission_name: "read:users"
+      )
+
+      request = assert_receive_request()
+
+      assert request.path ==
+               "/api/v2/users/auth0|123/effective-permissions/sources/effective-roles"
+
+      assert request.query == %{
+               "resource_server_identifier" => "https://api.example.com",
+               "permission_name" => "read:users"
+             }
+    end
+  end
+
   describe "delete_authentication_methods/1" do
     test "deletes all authentication methods" do
       stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)

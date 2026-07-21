@@ -94,6 +94,37 @@ defmodule Auth0Ex.UtilsTest do
     end
   end
 
+  describe "normalize_permissions/1" do
+    test "expands a tuple into the documented map" do
+      assert [%{resource_server_identifier: "https://api", permission_name: "read:users"}] ==
+               Utils.normalize_permissions([{"https://api", "read:users"}])
+    end
+
+    test "passes an atom-keyed map through untouched" do
+      permission = %{resource_server_identifier: "https://api", permission_name: "read:users"}
+
+      assert [permission] == Utils.normalize_permissions([permission])
+    end
+
+    test "passes a string-keyed map through, so Auth0's own output round-trips" do
+      permission = %{
+        "resource_server_identifier" => "https://api",
+        "permission_name" => "read:users"
+      }
+
+      assert [permission] == Utils.normalize_permissions([permission])
+    end
+
+    test "handles a mixed list" do
+      assert [%{resource_server_identifier: "https://api", permission_name: "a"}, %{"x" => "y"}] ==
+               Utils.normalize_permissions([{"https://api", "a"}, %{"x" => "y"}])
+    end
+
+    test "an empty list stays empty" do
+      assert [] == Utils.normalize_permissions([])
+    end
+  end
+
   describe "request_headers/2" do
     test ":mgmt prepends a bearer token" do
       Application.put_env(:auth0_ex, :mgmt_token, "STATIC")

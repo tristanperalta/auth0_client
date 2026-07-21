@@ -91,6 +91,14 @@ defmodule Auth0Ex.Api do
         do_request(:delete, path, params)
       end
 
+      # Several RBAC endpoints send their payload in the body of a DELETE. Unusual
+      # for HTTP, but it is what Auth0 documents. Named apart from do_delete/2 so
+      # the body cannot be mistaken for query params.
+      @doc false
+      def do_delete_body(path, body) do
+        do_request(:delete, path, %{}, Jason.encode!(body))
+      end
+
       # A management request needs a token before it can build headers, so header
       # construction may fail. `with` passes that error straight through.
       defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do

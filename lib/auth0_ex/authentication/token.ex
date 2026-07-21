@@ -147,10 +147,7 @@ defmodule Auth0Ex.Authentication.Token do
       client_secret: Map.get(opts, :client_secret)
     }
 
-    case post_form(@revoke_path, payload, []) do
-      {:ok, ""} -> :ok
-      other -> other
-    end
+    post_form(@revoke_path, payload, [])
   end
 
   defp grant_type_for_realm(nil), do: "password"

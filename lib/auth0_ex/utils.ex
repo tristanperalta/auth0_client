@@ -61,6 +61,32 @@ defmodule Auth0Ex.Utils do
   end
 
   @doc """
+  Normalises a list of permissions into the shape Auth0's RBAC endpoints expect.
+
+  Auth0 wants `%{resource_server_identifier: _, permission_name: _}` per permission,
+  which is verbose to write by hand, so a `{api_identifier, permission_name}` tuple
+  is accepted as shorthand:
+
+      normalize_permissions([{"https://api.example.com", "read:users"}])
+      #=> [%{resource_server_identifier: "https://api.example.com", permission_name: "read:users"}]
+
+  Maps pass through untouched, including the string-keyed maps Auth0 itself
+  returns, so a permission read from one call can be fed straight into another.
+  """
+  def normalize_permissions(permissions) when is_list(permissions) do
+    Enum.map(permissions, &normalize_permission/1)
+  end
+
+  defp normalize_permission({resource_server_identifier, permission_name}) do
+    %{
+      resource_server_identifier: resource_server_identifier,
+      permission_name: permission_name
+    }
+  end
+
+  defp normalize_permission(permission) when is_map(permission), do: permission
+
+  @doc """
   Returns the management API token, fetching and caching one if needed.
   """
   @spec mgmt_token() :: {:ok, String.t()} | {:error, Error.t()}

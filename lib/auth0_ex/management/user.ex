@@ -123,6 +123,123 @@ defmodule Auth0Ex.Management.User do
   end
 
   @doc """
+  Assigns roles to a user. Scopes: update:users
+
+      iex> Auth0Ex.Management.User.assign_roles("auth0|23423", ["rol_abc123"])
+  """
+  def assign_roles(user_id, role_ids) when is_binary(user_id) and is_list(role_ids) do
+    do_post("#{@path}/#{user_id}/roles", %{roles: role_ids})
+  end
+
+  @doc """
+  Removes roles from a user. Scopes: update:users
+
+      iex> Auth0Ex.Management.User.remove_roles("auth0|23423", ["rol_abc123"])
+  """
+  def remove_roles(user_id, role_ids) when is_binary(user_id) and is_list(role_ids) do
+    do_delete_body("#{@path}/#{user_id}/roles", %{roles: role_ids})
+  end
+
+  @doc """
+  Lists the permissions granted to a user directly, ignoring any that come from a
+  role. Use `effective_permissions/2` for the full picture. Scopes: read:users
+
+      iex> Auth0Ex.Management.User.permissions("auth0|23423")
+  """
+  def permissions(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/permissions", params)
+  end
+
+  @doc """
+  Assigns permissions to a user directly.
+
+  Accepts either the documented map form or `{api_identifier, permission_name}`
+  tuples. Scopes: update:users
+
+      iex> Auth0Ex.Management.User.assign_permissions("auth0|23423", [{"https://api.example.com", "read:users"}])
+  """
+  def assign_permissions(user_id, permissions)
+      when is_binary(user_id) and is_list(permissions) do
+    do_post("#{@path}/#{user_id}/permissions", %{
+      permissions: normalize_permissions(permissions)
+    })
+  end
+
+  @doc """
+  Removes permissions from a user. Scopes: update:users
+
+      iex> Auth0Ex.Management.User.remove_permissions("auth0|23423", [{"https://api.example.com", "read:users"}])
+  """
+  def remove_permissions(user_id, permissions)
+      when is_binary(user_id) and is_list(permissions) do
+    do_delete_body("#{@path}/#{user_id}/permissions", %{
+      permissions: normalize_permissions(permissions)
+    })
+  end
+
+  @doc """
+  Lists the organizations a user belongs to. Scopes: read:users read:organizations
+
+      iex> Auth0Ex.Management.User.organizations("auth0|23423")
+  """
+  def organizations(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/organizations", params)
+  end
+
+  @doc """
+  Lists every role a user has, whether assigned directly or inherited through a
+  group.
+
+  `roles/2` reports only direct assignments, so a user who gets their access
+  through a group looks role-less to it. Use this when you need the truth.
+
+  Uses checkpoint pagination — `from` and `take`. Scopes: read:users read:roles
+
+      iex> Auth0Ex.Management.User.effective_roles("auth0|23423")
+  """
+  def effective_roles(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/effective-roles", params)
+  end
+
+  @doc """
+  Lists the groups that grant a user a given role, answering "why does this user
+  have this role?".
+
+  Pass `role_id` to narrow it to one role.
+
+      iex> Auth0Ex.Management.User.effective_role_source_groups("auth0|23423", role_id: "rol_abc123")
+  """
+  def effective_role_source_groups(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/effective-roles/sources/groups", params)
+  end
+
+  @doc """
+  Lists every permission a user has, whether granted directly, through a role, or
+  through a group.
+
+  Pass `resource_server_identifier` to limit it to one API. Uses checkpoint
+  pagination — `from` and `take`.
+
+      iex> Auth0Ex.Management.User.effective_permissions("auth0|23423")
+      iex> Auth0Ex.Management.User.effective_permissions("auth0|23423", resource_server_identifier: "https://api.example.com")
+  """
+  def effective_permissions(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/effective-permissions", params)
+  end
+
+  @doc """
+  Lists the roles that grant a user a given permission, answering "why does this
+  user have this permission?".
+
+  Pass `resource_server_identifier` and `permission_name` to name the permission.
+
+      iex> Auth0Ex.Management.User.effective_permission_source_roles("auth0|23423", resource_server_identifier: "https://api.example.com", permission_name: "read:users")
+  """
+  def effective_permission_source_roles(user_id, params \\ %{}) when is_binary(user_id) do
+    do_get("#{@path}/#{user_id}/effective-permissions/sources/effective-roles", params)
+  end
+
+  @doc """
     Deletes all users MFA authentication methods. Scopes: delete:authentication_methods
 
       iex > Auth0Ex.Management.User.delete_authentication_methods("auth0|23423")

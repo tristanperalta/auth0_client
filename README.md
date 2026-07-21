@@ -107,7 +107,43 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 ```
 
 Available resources: `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`, `Job`,
-`Log`, `ResourceServer`, `Ticket`, `User`, `UserBlock`.
+`Log`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
+
+### Roles and permissions
+
+```elixir
+alias Auth0Ex.Management.{Role, User}
+
+{:ok, role} = Role.create(%{name: "editor", description: "Can edit content"})
+
+# Permissions take {api_identifier, permission_name} tuples, or the map form
+# Auth0 documents — both send the same request
+Role.add_permissions(role["id"], [
+  {"https://api.example.com", "read:content"},
+  {"https://api.example.com", "write:content"}
+])
+#=> :ok
+
+User.assign_roles("auth0|abc123", [role["id"]])
+#=> :ok
+```
+
+Mutations return a bare `:ok`. Auth0 answers them with 200, 201 or 204 depending on the endpoint, all with
+an empty body; this library treats those as the one outcome they are.
+
+To find out why a user has some access, use the effective-* functions. `User.roles/2` reports only direct
+assignments, so a user who inherits everything through a group looks role-less to it:
+
+```elixir
+User.effective_roles("auth0|abc123")
+User.effective_permissions("auth0|abc123", resource_server_identifier: "https://api.example.com")
+
+# which role grants this permission?
+User.effective_permission_source_roles("auth0|abc123",
+  resource_server_identifier: "https://api.example.com",
+  permission_name: "write:content"
+)
+```
 
 ### Logging a user in
 
@@ -189,8 +225,8 @@ form-encoded, as OAuth 2.0 and Auth0 specify, and `/dbconnections/*` is JSON.
 Every API function returns one of:
 
 ```elixir
-{:ok, body}                  # 200/201, body decoded from JSON
-:ok                          # 204 No Content, and a successful token revocation
+{:ok, body}                  # a 2xx with a body, decoded from JSON
+:ok                          # a 2xx with no body
 {:error, %Auth0Ex.Error{}}   # everything else
 ```
 
