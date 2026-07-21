@@ -69,6 +69,37 @@ User.effective_permission_source_roles("auth0|abc123",
 User.effective_role_source_groups("auth0|abc123", role_id: role["id"])
 ```
 
+## Groups
+
+A group carries roles, and every member inherits them. That is how a user ends up with a role nobody
+assigned them directly — the answer `effective_role_source_groups/2` gives you.
+
+```elixir
+alias Auth0Ex.Management.Group
+
+Group.all(connection_id: "con_abc123")
+Group.get("grp_abc123")
+Group.members("grp_abc123")
+Group.roles("grp_abc123")                  # what every member inherits
+
+Group.add_roles("grp_abc123", ["rol_1"])
+Group.remove_roles("grp_abc123", ["rol_1"])
+```
+
+There is no `Group.create/1`. **Groups come from the identity provider**, selected with
+`Auth0Ex.Management.Connection.DirectoryProvisioning.replace_synchronized_groups/2` — see
+[Connections](connections.md). `Group.delete/1` drops one from the tenant, but if the connection still
+synchronizes it, the next run brings it back.
+
+The same relationship reads from the role's side too:
+
+```elixir
+Role.groups("rol_abc123")
+Role.add_groups("rol_abc123", ["grp_abc123"])
+```
+
+Auth0 reference: [Groups](https://auth0.com/docs/api/management/v2/groups).
+
 ## Return values
 
 Mutations return a bare `:ok`. Auth0 answers them with 200, 201 or 204 depending on the endpoint, all with

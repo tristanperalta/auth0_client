@@ -135,6 +135,9 @@ carries an `id` and nothing else; Auth0 rejects any other key.
 `synchronize/1` returns once the run is *accepted*, not once it finishes. Read `synchronized_groups/2` or
 the configuration itself to see the result.
 
+Synced groups land in the tenant as `Auth0Ex.Management.Group`, where they carry roles — which is why that
+module has no `create/1`. See [Roles and permissions](rbac.md).
+
 Both modules also list every configuration in the tenant, which is the quickest way to find out what is
 already wired up:
 

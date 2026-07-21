@@ -67,6 +67,8 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 
 ## Sessions and tokens
 
+From the user's side — everything at once:
+
 ```elixir
 User.sessions("auth0|abc123")
 User.delete_sessions("auth0|abc123")       # signs them out everywhere
@@ -76,6 +78,36 @@ User.delete_refresh_tokens("auth0|abc123")
 
 User.revoke_access("auth0|abc123")         # both at once
 ```
+
+Or one at a time, using the ids those listings return:
+
+```elixir
+alias Auth0Ex.Management.{RefreshToken, Session}
+
+Session.get(session_id)
+Session.delete(session_id)                 # ends the session
+Session.revoke(session_id)                 # ends it AND its refresh tokens
+
+RefreshToken.get(token_id)
+RefreshToken.delete(token_id)
+RefreshToken.revoke(%{ids: [token_id]})    # in bulk, up to 100
+```
+
+> #### `delete` and `revoke` differ where it matters {: .warning}
+>
+> `Session.delete/1` ends the session but leaves its refresh tokens alive, so an application holding one
+> gets a new access token immediately. After a credential compromise, `Session.revoke/1` is the call that
+> actually locks the user out.
+
+`RefreshToken.revoke/1` takes an **exclusive choice**, not a set of filters: `ids`, or `user_id`, or
+`user_id` + `client_id`, or those plus `audience`. `client_id` alone is rejected, and `ids` combines with
+nothing.
+
+`RefreshToken.all/1` is the same listing as `User.refresh_tokens/2` — `user_id` is required either way —
+except that it also filters by `client_id`.
+
+To revoke a refresh token as its *holder* rather than as an administrator, with no Management token
+involved, use `Auth0Ex.Authentication.Token.revoke/3` — see [Logging users in](login.md).
 
 ### Consent grants
 

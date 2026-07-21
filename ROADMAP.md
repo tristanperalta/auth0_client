@@ -21,15 +21,15 @@ Two things that look like evidence and are not:
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 237 | 451 | ~53% |
+| Management v2 | 253 | 451 | ~56% |
 | Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
 
-Management resource groups: 19 fully covered, 3 partial, 27 with no coverage at all.
+Management resource groups: 22 fully covered, 3 partial, 24 with no coverage at all.
 
 - **Full:** `client-grants`, `clients`, `connections`, `connections-directory-provisionings`,
-  `connections-scim-configurations`, `custom-domains`, `device-credentials`, `emails`, `grants`,
-  `jobs`, `keys`, `logs`, `resource-servers`, `roles`, `tenants`, `tickets`, `user-blocks`, `users`,
-  `users-by-email`
+  `connections-scim-configurations`, `custom-domains`, `device-credentials`, `emails`, `grants`, `groups`,
+  `jobs`, `keys`, `logs`, `refresh-tokens`, `resource-servers`, `roles`, `sessions`, `tenants`, `tickets`,
+  `user-blocks`, `users`, `users-by-email`
 - **Partial:** `organizations` 37/42, `guardian` 30/36, `actions` 14/24 — all three partial by the
   decisions recorded in §7, not for want of work
 
@@ -197,12 +197,19 @@ Ordered by value. Counts are endpoints in each group.
       `Connection.DirectoryProvisioning` (9) cover inbound and outbound provisioning, including the two
       tenant-level listings that sit under their own OpenAPI tags. Three groups fully covered, and the last
       core resource that was partial for want of work
+- [x] **`Group` (7) + `Session` (4) + `RefreshToken` (5)** — one theme: make addressable the things `User`
+      and `Role` already referenced. `groups` had seven endpoints and no module at all, while
+      `User.effective_role_source_groups/2` named groups as the reason a user held a role and nothing could
+      open one; `User.sessions/2` and `refresh_tokens/2` listed objects that could only be destroyed all at
+      once. Three groups fully covered
 
 **§5's ordered list is complete.** What remains is the next tier below, which has never been ranked
 against itself.
 
-**Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12), `Session` (4),
-`RefreshToken` (5), `Prompt`, `Branding` (23), `NetworkAcl`, `Flow`, `Form`.
+**Next tier:** `EmailTemplate` (4), `LogStream` (5), `AttackProtection` (12) + `anomaly` (2), `Prompt` (10),
+`Branding` (23), `NetworkAcl` (6), `Flow` (13), `Form` (5), `stats` (2), `self-service-profiles` (9),
+`event-streams` (10), `connection-profiles` (7), `user-attribute-profiles` (7),
+`token-exchange-profiles` (5).
 
 **Will not support:** `hooks` (9) and `rules-configs` (3) — both legacy, superseded by Actions.
 
@@ -291,6 +298,13 @@ issues; they are the things that bite under load or partial failure.
   PATCH as an array instead of raising `ArgumentError` on `Enum.into/2`. That is not the unification this
   note forbids — keyword lists still become objects, `do_put` is untouched, and the old behaviour on a
   non-keyword list was a crash, so nothing could depend on it.
+- **Early Access is not a reason to skip an endpoint; deprecated is.** §3's rule is about endpoints Auth0
+  is retiring, not ones it is still introducing. `x-release-lifecycle: EA` appears on 37 operations, and
+  this library already shipped several before the flag was ever examined — `Organization.connections/2`
+  among them — so excluding `GET /refresh-tokens` and `POST /refresh-tokens/revoke` would have invented a
+  policy mid-stream and left `refresh-tokens` partial for no stated reason. EA endpoints are wrapped, with
+  the lifecycle noted in the `@doc` so a caller can weigh it. The 23 `beta` operations are a separate
+  question, and all of them currently fall in groups deprioritized as niche.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
   `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
   `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding
