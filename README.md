@@ -118,7 +118,7 @@ Auth0Ex.Management.Ticket.password_change(%{user_id: "auth0|abc123"})
 ```
 
 Available resources: `Client`, `ClientGrant`, `Connection`, `DeviceCredential`, `EmailProvider`, `Job`,
-`Log`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
+`Log`, `Organization`, `ResourceServer`, `Role`, `Ticket`, `User`, `UserBlock`.
 
 ### Roles and permissions
 
@@ -155,6 +155,36 @@ User.effective_permission_source_roles("auth0|abc123",
   permission_name: "write:content"
 )
 ```
+
+### Organizations
+
+Organizations are Auth0's B2B primitive — one tenant, many customer organizations, each with its own
+members and connections.
+
+```elixir
+alias Auth0Ex.Management.Organization
+
+# `name` must be lowercase with no spaces; display_name is the human-facing one
+{:ok, org} = Organization.create(%{name: "acme-corp", display_name: "Acme Corp"})
+
+Organization.add_members(org["id"], ["auth0|abc123"])
+#=> :ok
+
+# Roles assigned here are scoped to this organization only
+Organization.assign_member_roles(org["id"], "auth0|abc123", [role["id"]])
+#=> :ok
+
+Organization.create_invitation(org["id"], %{
+  inviter: %{name: "Admin"},
+  invitee: %{email: "new@acme.com"},
+  client_id: client_id
+})
+#=> {:ok, %{"invitation_url" => "https://your-tenant.auth0.com/..."}}
+```
+
+The scoping is the part worth remembering: the same user can be an admin of one organization and a
+read-only member of another. `Organization.member_roles/3` reports a member's roles inside one
+organization; `User.roles/2` reports roles assigned tenant-wide.
 
 ### Logging a user in
 

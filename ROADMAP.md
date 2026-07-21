@@ -13,13 +13,14 @@ Management API index. Absence from the OpenAPI document and from the resource na
 
 | API | Implemented | Total | |
 |---|---|---|---|
-| Management v2 | 73 | 451 | ~16% |
+| Management v2 | 110 | 451 | ~24% |
 | Authentication | 8 | ~30 | plus 5 of ~11 `/oauth/token` grants |
 
-Management resource groups: 7 fully covered, 5 partial, 37 with no coverage at all.
+Management resource groups: 7 fully covered, 6 partial, 36 with no coverage at all.
 
 - **Full:** `device-credentials`, `emails`, `logs`, `resource-servers`, `roles`, `tickets`, `user-blocks`
-- **Partial:** `users` 23/39, `clients` 6/14, `connections` 6/28, `client-grants` 4/6, `jobs` 1/5
+- **Partial:** `organizations` 37/42, `users` 23/39, `clients` 6/14, `connections` 6/28,
+  `client-grants` 4/6, `jobs` 1/5
 
 The `rules` group (5 operations) was removed rather than fixed — see §3 — so the count went 55 → 50 before
 RBAC took it to 73. `blacklists` was never in the OpenAPI document, so removing it changed no count.
@@ -131,7 +132,9 @@ Ordered by value. Counts are endpoints in each group.
       revocation, and the remaining identity endpoints
 - [ ] **Complete `Job` (4 missing)** — `users-imports`, `users-exports`, `GET /jobs/{id}`, `/jobs/{id}/errors`.
       The module sends verification emails and nothing else, so bulk migration is impossible
-- [ ] **`Organization` (42)** — the largest group in the API and the backbone of B2B deployments
+- [x] **`Organization` (37 of 42)** — `Auth0Ex.Management.Organization`. CRUD, members, member roles,
+      invitations, connections, client grants, discovery domains and groups. The five `/enabled_connections`
+      endpoints are deliberately not wrapped — see §7
 - [ ] **`Guardian` (36)** — MFA factor configuration. `User.enrollments/1` currently dangles with no way to
       configure the factors it reports
 - [ ] **`Grant` (3) + `UsersByEmail` (1) + `Tenant` (2)** — six endpoints total, all common lookups. Best
@@ -196,6 +199,11 @@ issues; they are the things that bite under load or partial failure.
 - **A 2xx with an empty body means `:ok`.** Auth0 answers equivalent mutations with 200, 201 or 204
   depending on the endpoint. `Parser` collapses all three, so callers never get a meaningless `{:ok, ""}`
   and no endpoint needs its own special case.
+- **`/organizations/{id}/enabled_connections` is deliberately not wrapped.** Auth0 ships it alongside
+  `/organizations/{id}/connections` with the same semantics; neither is formally deprecated, but
+  `/connections` takes a superset of the body (`organization_connection_name`, `organization_access_level`,
+  `is_enabled`). Wrapping both would ship two near-identical function families and make callers guess.
+  This is why `organizations` reads 37/42 rather than fully covered — it is a choice, not a gap.
 - **Some endpoints take a request body on `DELETE`.** Unusual, but documented — the RBAC remove operations
   work this way. `do_delete_body/2` exists for exactly those; `do_delete/2` still means query params.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
