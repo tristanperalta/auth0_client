@@ -38,7 +38,7 @@ defmodule Auth0Ex.Config do
   @spec user_agent() :: String.t()
   def user_agent do
     Application.get_env(:auth0_ex, :user_agent) ||
-      "Auth0Ex <https://github.com/techgaun/auth0_ex>"
+      "Auth0Ex <https://github.com/tristanperalta/auth0_client>"
   end
 
   defp custom_domain? do

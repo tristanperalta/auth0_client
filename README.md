@@ -1,8 +1,12 @@
 # Auth0Ex
 
-[![Hex version](https://img.shields.io/hexpm/v/auth0_ex.svg "Hex version")](https://hex.pm/packages/auth0_ex) ![Hex downloads](https://img.shields.io/hexpm/dt/auth0_ex.svg "Hex downloads") ![Build Status](https://github.com/techgaun/auth0_ex/actions/workflows/main.yml/badge.svg)
+![Build Status](https://github.com/tristanperalta/auth0_client/actions/workflows/main.yml/badge.svg)
 
 > An elixir client library for Auth0
+
+This is a fork of [techgaun/auth0_ex](https://github.com/techgaun/auth0_ex). The repository is named
+`auth0_client`, but the OTP application, module namespace and config key remain `:auth0_ex` /
+`Auth0Ex` so the library stays drop-in compatible with the original.
 
 ## Installation
 
@@ -18,7 +22,7 @@ You can use github repo as your package source to use the latest source code but
 
 ```elixir
 def deps do
-  [{:auth0_ex, github: "techgaun/auth0_ex"}]
+  [{:auth0_ex, github: "tristanperalta/auth0_client"}]
 end
 ```
 ## Configuration
@@ -48,6 +52,20 @@ config :auth0_ex,
   http_opts: []
 ```
 
+### HTTP options
+
+`http_opts` is passed straight through to [Req](https://hexdocs.pm/req), which this library uses as its
+HTTP client. Any [`Req.request/1` option](https://hexdocs.pm/req/Req.html#request/1) is valid there:
+
+```elixir
+config :auth0_ex,
+  http_opts: [
+    receive_timeout: 30_000,
+    connect_options: [timeout: 10_000],
+    retry: :safe_transient
+  ]
+```
+
 ### Notes
 
 - The v2 `search_engine` API is being deprecated by Auth0. User queries now specify `search_engine=v3` by default. If for some reason you need the `v2` engine you can set `v2_search: true` in your config block.
@@ -65,6 +83,7 @@ In addition to the management API resources, there is also a support for most us
 Authentication API will use the same `domain` config you specify in the config above. If you wish to use `Auth0Ex`
 for authentication APIs only, all you need to specify is `domain` in config.
 
-## Author
+## Authors
 
-- [techgaun](https://github.com/techgaun)
+- [Tristan Peralta](https://github.com/tristanperalta) — maintainer of this fork
+- [techgaun](https://github.com/techgaun) — original author of [auth0_ex](https://github.com/techgaun/auth0_ex)

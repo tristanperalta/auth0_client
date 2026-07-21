@@ -123,9 +123,9 @@ defmodule Auth0Ex.ConfigTest do
       assert "MyCustomAgent <http://example.com>" == Config.user_agent()
     end
 
-    test "returns an empty list if not set" do
+    test "returns the default agent if not set" do
       Application.delete_env(:auth0_ex, :user_agent)
-      assert "Auth0Ex <https://github.com/techgaun/auth0_ex>" == Config.user_agent()
+      assert "Auth0Ex <https://github.com/tristanperalta/auth0_client>" == Config.user_agent()
     end
   end
 end

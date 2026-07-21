@@ -4,58 +4,94 @@ on:
   push:
     branches:
       - "*"
+  pull_request:
 
 jobs:
   lint:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    name: Lint
     env:
       MIX_ENV: dev
-    name: Lint
-    strategy:
-      matrix:
-        os: ["ubuntu-20.04"]
-        elixir: ["1.13"]
-        otp: ["24"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
+        id: beam
         with:
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
-      - uses: actions/cache@v2
+          otp-version: "29"
+          elixir-version: "1.20"
+      - uses: actions/cache@v4
         with:
-          path: deps
-          key: ${{ matrix.os }}-otp_${{ matrix.otp }}-elixir_${{ matrix.elixir }}-mix_${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ matrix.os }}-otp_${{ matrix.otp }}-elixir_${{ matrix.elixir }}-mix_
+          path: |
+            deps
+            _build
+          key: lint-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: lint-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
       - run: mix deps.get
       - run: mix deps.compile
+      - run: mix compile --warnings-as-errors
       - run: mix format --check-formatted
       - run: mix deps.unlock --check-unused
       - run: mix credo --strict --all
 
   test:
-    runs-on: ${{ matrix.os }}
-    name: Test Elixir ${{ matrix.elixir }}, OTP ${{ matrix.otp }}, OS ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    name: Test Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
     env:
       MIX_ENV: test
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-20.04"]
-        elixir: ["1.13", "1.12", "1.11"]
-        otp: ["24", "23", "22"]
+        include:
+          - elixir: "1.20"
+            otp: "29"
+          - elixir: "1.17"
+            otp: "26"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
+        id: beam
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
-          path: deps
-          key: ${{ matrix.os }}-otp_${{ matrix.otp }}-elixir_${{ matrix.elixir }}-mix_${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ matrix.os }}-otp_${{ matrix.otp }}-elixir_${{ matrix.elixir }}-mix_
+          path: |
+            deps
+            _build
+          key: test-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: test-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
       - run: mix deps.get --only test
       - run: mix deps.compile
-      - run: mix compile
+      - run: mix compile --warnings-as-errors
       - run: mix test
+
+  dialyzer:
+    runs-on: ubuntu-latest
+    name: Dialyzer
+    env:
+      MIX_ENV: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        id: beam
+        with:
+          otp-version: "29"
+          elixir-version: "1.20"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: dialyzer-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: dialyzer-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+      - run: mix deps.get
+      # The PLT is expensive to build and only changes when the deps or the
+      # OTP/Elixir pair change, so it is cached on its own key.
+      - uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: plt-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: plt-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+      - run: mkdir -p priv/plts
+      - run: mix dialyzer --plt
+      - run: mix dialyzer --format github
