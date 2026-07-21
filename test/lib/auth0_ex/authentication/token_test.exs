@@ -261,6 +261,109 @@ defmodule Auth0Ex.Authentication.TokenTest do
     end
   end
 
+  describe "device/2,3" do
+    test "sends the device_code grant type, form-encoded" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, %{"access_token" => "a_token"}} = Token.device("an_id", "a_device_code")
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+      assert request.content_type == "application/x-www-form-urlencoded"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "device_code" => "a_device_code",
+               "grant_type" => "urn:ietf:params:oauth:grant-type:device_code"
+             }
+    end
+
+    test "posts a client_secret given in opts" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.device("an_id", "a_device_code", %{client_secret: "a_secret"})
+
+      assert assert_receive_request().body["client_secret"] == "a_secret"
+    end
+
+    # authorization_pending is the normal state while the user is still approving, not
+    # a failure. It arrives as an error like any other, so a caller has to read the
+    # code out of the body rather than bailing on the first {:error, _}.
+    test "authorization_pending arrives as an error carrying a readable code" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_status(403)
+        |> Req.Test.json(%{
+          "error" => "authorization_pending",
+          "error_description" => "User has yet to authorize device code."
+        })
+      end)
+
+      assert {:error, %Auth0Ex.Error{status: 403, body: body}} =
+               Token.device("an_id", "a_device_code")
+
+      assert body["error"] == "authorization_pending"
+    end
+  end
+
+  describe "native_social/3,4" do
+    test "sends the token-exchange grant type with the subject token" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, _} =
+               Token.native_social(
+                 "an_id",
+                 "an_apple_token",
+                 "http://auth0.com/oauth/token-type/apple-authz-code"
+               )
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/token"
+
+      assert request.body == %{
+               "client_id" => "an_id",
+               "subject_token" => "an_apple_token",
+               "subject_token_type" => "http://auth0.com/oauth/token-type/apple-authz-code",
+               "grant_type" => "urn:ietf:params:oauth:grant-type:token-exchange"
+             }
+    end
+
+    # A form-encoded body has no representation for a nested object, and
+    # URI.encode_query/1 raises on one. Auth0 takes user_profile as JSON in a single
+    # field, so without the encoding this call would not send at all.
+    test "JSON-encodes user_profile into one field, leaving flat fields alone" do
+      stub_request(%{"access_token" => "a_token"})
+
+      assert {:ok, _} =
+               Token.native_social("an_id", "a_token", "a_type", %{
+                 scope: "openid profile",
+                 user_profile: %{name: %{firstName: "John", lastName: "Smith"}}
+               })
+
+      body = assert_receive_request().body
+      assert body["scope"] == "openid profile"
+
+      assert Jason.decode!(body["user_profile"]) == %{
+               "name" => %{"firstName" => "John", "lastName" => "Smith"}
+             }
+    end
+
+    test "passes a user_profile that is already a string through unchanged" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.native_social("an_id", "a_token", "a_type", %{user_profile: ~s({"name":{}})})
+
+      assert assert_receive_request().body["user_profile"] == ~s({"name":{}})
+    end
+
+    test "forwards the end user's ip like the password grant does" do
+      stub_request(%{"access_token" => "a_token"})
+      Token.native_social("an_id", "a_token", "a_type", %{forwarded_for: "203.0.113.5"})
+
+      assert {"auth0-forwarded-for", "203.0.113.5"} in assert_receive_request().headers
+    end
+  end
+
   describe "revoke/2,3" do
     test "posts to the revoke endpoint and normalises the empty 200 body to :ok" do
       stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)

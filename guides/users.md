@@ -109,6 +109,11 @@ except that it also filters by `client_id`.
 To revoke a refresh token as its *holder* rather than as an administrator, with no Management token
 involved, use `Auth0Ex.Authentication.Token.revoke/3` — see [Logging users in](login.md).
 
+To sign a user out of **every application**, not just this tenant's,
+`Auth0Ex.Authentication.global_token_revocation/3` is Auth0's Universal Logout endpoint. It authenticates
+with a bearer token you supply rather than a management token, and — like everything above — it destroys
+sessions and refresh tokens but leaves already-issued access tokens working until they expire.
+
 ### Consent grants
 
 A grant records that a user consented to an application's scopes. Deleting one makes Auth0 prompt for

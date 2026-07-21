@@ -263,6 +263,110 @@ defmodule Auth0Ex.AuthenticationTest do
     end
   end
 
+  describe "device_code/1,2" do
+    test "starts the device flow" do
+      stub_request(%{
+        "device_code" => "dc_1",
+        "user_code" => "ABCD-EFGH",
+        "verification_uri" => "https://tenant.auth0.com/activate",
+        "interval" => 5
+      })
+
+      assert {:ok, %{"user_code" => "ABCD-EFGH"}} =
+               Authentication.device_code("a_client_id", %{
+                 scope: "openid profile offline_access",
+                 audience: "https://your-api/"
+               })
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/device/code"
+      assert request.content_type == "application/x-www-form-urlencoded"
+
+      assert request.body == %{
+               "client_id" => "a_client_id",
+               "scope" => "openid profile offline_access",
+               "audience" => "https://your-api/"
+             }
+    end
+
+    # An empty form field is not the same as an absent one.
+    test "omits scope and audience when not given" do
+      stub_request(%{"device_code" => "dc_1"})
+
+      assert {:ok, _} = Authentication.device_code("a_client_id")
+
+      assert assert_receive_request().body == %{"client_id" => "a_client_id"}
+    end
+  end
+
+  describe "pushed_authorization_request/1,2" do
+    test "posts the authorization parameters and accepts a 201" do
+      stub_request(fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(
+          201,
+          ~s({"request_uri":"urn:ietf:params:oauth:request_uri:x","expires_in":90})
+        )
+      end)
+
+      assert {:ok, %{"request_uri" => "urn:ietf:params:oauth:request_uri:x"}} =
+               Authentication.pushed_authorization_request("a_client_id", %{
+                 client_secret: "a_secret",
+                 response_type: "code",
+                 redirect_uri: "https://app.example.com/callback"
+               })
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+      assert request.path == "/oauth/par"
+      assert request.content_type == "application/x-www-form-urlencoded"
+
+      assert request.body == %{
+               "client_id" => "a_client_id",
+               "client_secret" => "a_secret",
+               "response_type" => "code",
+               "redirect_uri" => "https://app.example.com/callback"
+             }
+    end
+  end
+
+  describe "global_token_revocation/3" do
+    # The only /oauth/* endpoint this library calls that takes JSON rather than a
+    # form-encoded body, and the only one authenticated by a caller-supplied token.
+    test "sends a JSON body with the caller's bearer token" do
+      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+
+      subject = %{format: "iss_sub", iss: "https://tenant.auth0.com/", sub: "auth0|abc123"}
+
+      assert :ok =
+               Authentication.global_token_revocation(
+                 "Username-Password-Authentication",
+                 subject,
+                 "an_access_token"
+               )
+
+      request = assert_receive_request()
+      assert request.method == "POST"
+
+      assert request.path ==
+               "/oauth/global-token-revocation/connection/Username-Password-Authentication"
+
+      assert request.content_type == "application/json"
+
+      assert request.body == %{
+               "subject" => %{
+                 "format" => "iss_sub",
+                 "iss" => "https://tenant.auth0.com/",
+                 "sub" => "auth0|abc123"
+               }
+             }
+
+      assert {"authorization", "Bearer an_access_token"} in request.headers
+    end
+  end
+
   describe "authorization" do
     test "sends no authorization header when the caller supplies no token" do
       stub_request(%{"_id" => "1"})

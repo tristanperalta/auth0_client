@@ -22,7 +22,7 @@ Two things that look like evidence and are not:
 | API | Implemented | Total | |
 |---|---|---|---|
 | Management v2 | 253 | 451 | ~56% |
-| Authentication | 17 | ~30 | plus 9 of ~11 `/oauth/token` grants |
+| Authentication | 21 | ~30 | plus 11 of ~11 `/oauth/token` grants |
 
 Management resource groups: 22 fully covered, 3 partial, 24 with no coverage at all.
 
@@ -110,10 +110,12 @@ This library does not support endpoints Auth0 has deprecated or retired.
 ## 4. Authentication API
 
 Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userinfo`, `/authorize`,
-`/v2/logout`, `/oidc/logout`, `/oauth/revoke`, `/passwordless/start`, the four `/mfa/*` endpoints,
+`/v2/logout`, `/oidc/logout`, `/oauth/revoke`, `/oauth/par`, `/oauth/device/code`,
+`/oauth/global-token-revocation`, `/passwordless/start`, the four `/mfa/*` endpoints,
 `/.well-known/jwks.json`, `/.well-known/openid-configuration`, and `/oauth/token` with the
 `authorization_code`, PKCE, `client_credentials`, `refresh_token`, `password` / `password-realm`,
-`mfa-otp`, `mfa-oob`, `mfa-recovery-code` and `passwordless/otp` grants.
+`mfa-otp`, `mfa-oob`, `mfa-recovery-code`, `passwordless/otp`, `device_code` and native-social
+`token-exchange` grants.
 
 **P0 — done. The authorization-code flow is complete end to end.**
 
@@ -136,12 +138,23 @@ Implemented: `/dbconnections/signup`, `/dbconnections/change_password`, `/userin
       Closes the gap where `Token.password/4` reported `mfa_required` and nothing could act on it
 - [x] JWKS and OIDC discovery — `Authentication.jwks/0` and `openid_configuration/0`
 
-**P2 and below**
+**P2 — done. Every documented `/oauth/token` grant is now reachable.**
 
-- [ ] Device Authorization Flow (`POST /oauth/device/code` + `device_code` grant)
-- [ ] Pushed Authorization Requests (`POST /oauth/par`)
-- [ ] Native social token exchange
-- [ ] Global token revocation
+- [x] Device Authorization Flow — `Authentication.device_code/2` starts it and `Token.device/3` exchanges,
+      mirroring the `passwordless_start/1` + `Token.passwordless/5` split. The flow is a polling loop whose
+      `authorization_pending` and `slow_down` responses are **errors that mean keep going**, so the `@doc`
+      and the guide both show the loop rather than the call
+      — [docs](https://auth0.com/docs/api/authentication/device-authorization-flow/authorize-device)
+- [x] Pushed Authorization Requests — `Authentication.pushed_authorization_request/2`, answering `201` with
+      a `request_uri` that feeds the existing `Url.authorize/2`. Auth0's prose for this endpoint calls the
+      field `redirect_uri`; its own response schema and RFC 9126 both say `request_uri`, which is what the
+      API returns — recorded so nobody "corrects" it back
+- [x] Native social token exchange — `Token.native_social/4`. `user_profile` is a nested object in a
+      form-encoded body, which `URI.encode_query/1` cannot represent, so the function JSON-encodes that one
+      value. Done in the function rather than in `post_form/3`, where it would silently encode fields Auth0
+      expects flat
+- [x] Global token revocation — `Authentication.global_token_revocation/3`. Revokes sessions and refresh
+      tokens across every application but **not access tokens**, which expire on their own
 - [ ] Back-channel login (CIBA), passkeys, dynamic client registration, SAML/WS-Fed
 
 **Smaller drift, same area**
@@ -306,11 +319,17 @@ issues; they are the things that bite under load or partial failure.
   the lifecycle noted in the `@doc` so a caller can weigh it. The 23 `beta` operations are a separate
   question, and all of them currently fall in groups deprioritized as niche.
 - **Request encoding is decided per endpoint, from that endpoint's own docs — not by a house convention.**
-  `/oauth/token` and `/oauth/revoke` are form-encoded, as RFC 6749 and Auth0 both specify.
-  `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs, and form encoding
-  has no representation for a nested object — `URI.encode_query/1` raises on one. `/jobs/users-imports` is
-  `multipart/form-data`, which Auth0 accepts in no other encoding. Three encodings, each chosen per
-  endpoint. Do not "unify" these.
+  `/oauth/token`, `/oauth/revoke`, `/oauth/par` and `/oauth/device/code` are form-encoded, as RFC 6749 and
+  Auth0 both specify. `/dbconnections/*` is JSON: it carries `user_metadata`, typed `object` in the docs,
+  and form encoding has no representation for a nested object — `URI.encode_query/1` raises on one.
+  `/jobs/users-imports` is `multipart/form-data`, which Auth0 accepts in no other encoding. Three
+  encodings, each chosen per endpoint. Do not "unify" these.
+
+  **Not even a shared path prefix is evidence.** `/oauth/global-token-revocation` takes JSON while every
+  other `/oauth/*` endpoint here takes a form. And where a form-encoded endpoint genuinely needs a nested
+  object — `user_profile` on the native-social grant — Auth0's answer is JSON inside one string field, so
+  `Token.native_social/4` encodes that single value itself. That transform belongs in the function, not in
+  `post_form/3`, which would encode fields Auth0 expects flat.
 - **TLS verification is enforced.** Re-verified on the Req/Finch path after the migration: expired,
   hostname-mismatch and self-signed certificates are all rejected, a valid host succeeds. Trust now comes
   from OTP's system CA store via Mint rather than `certifi` via hackney, so the pre-migration evidence chain

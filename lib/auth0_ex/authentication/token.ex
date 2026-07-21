@@ -261,6 +261,99 @@ defmodule Auth0Ex.Authentication.Token do
     |> post_token()
   end
 
+  @doc """
+  Exchanges a device code for tokens, completing the Device Authorization Flow.
+
+  Start the flow with `Auth0Ex.Authentication.device_code/2`, show the user its
+  `user_code` and `verification_uri`, then call this repeatedly until they finish.
+
+  **The errors here are part of the flow, not failures.** While the user is still
+  authorizing, Auth0 answers `authorization_pending`; poll faster than the `interval`
+  the start call returned and it answers `slow_down`, meaning lengthen the wait.
+  Treating the first `{:error, _}` as fatal means the login never completes:
+
+      def poll(client_id, device_code, interval) do
+        case Auth0Ex.Authentication.Token.device(client_id, device_code) do
+          {:ok, tokens} ->
+            {:ok, tokens}
+
+          {:error, %Auth0Ex.Error{body: %{"error" => "authorization_pending"}}} ->
+            Process.sleep(interval * 1000)
+            poll(client_id, device_code, interval)
+
+          {:error, %Auth0Ex.Error{body: %{"error" => "slow_down"}}} ->
+            Process.sleep((interval + 5) * 1000)
+            poll(client_id, device_code, interval + 5)
+
+          {:error, error} ->
+            {:error, error}
+        end
+      end
+
+  `expired_token` and `access_denied` are the terminal errors — the codes ran out, or
+  the user refused.
+
+  `opts` may carry `:client_secret` for a confidential client; a device is normally a
+  public client and sends none.
+
+  https://auth0.com/docs/api/authentication/device-authorization-flow/authorize-device
+
+      iex> Auth0Ex.Authentication.Token.device("client_id", "a_device_code")
+  """
+  def device(client_id, device_code, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      device_code: device_code,
+      client_secret: Map.get(opts, :client_secret),
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code"
+    }
+    |> post_token()
+  end
+
+  @doc """
+  Exchanges an externally-issued identity artifact for Auth0 tokens.
+
+  For native social sign-in only — a mobile SDK authenticates the user (Sign In with
+  Apple, say) and hands your app an artifact, which this turns into Auth0 tokens with
+  no further user interaction. Auth0 discourages it outside that setting.
+
+  `subject_token_type` identifies what `subject_token` is; the pair is required.
+  `opts` may carry `:audience`, `:scope`, `:forwarded_for` and `:user_profile`.
+
+  `user_profile` is a nested object — `%{name: %{firstName: "John", lastName: "Smith"}}`
+  — used for iOS interactions where the profile can be updated. The body here is
+  form-encoded, which has no representation for a nested object, so Auth0 takes it as
+  JSON inside a single field; this function encodes it for you.
+
+  Because scopes are implied by the trust in this grant, omitting `scope` returns
+  every scope defined for the audience, and the issued set may differ from the one
+  requested — check the `scope` in the response.
+
+  https://auth0.com/docs/api/authentication/token-exchange-for-native-social/token-exchange-native-social
+
+      iex> Auth0Ex.Authentication.Token.native_social("client_id", "apple_id_token", "http://auth0.com/oauth/token-type/apple-authz-code")
+  """
+  def native_social(client_id, subject_token, subject_token_type, opts \\ %{})
+      when is_map(opts) do
+    payload = %{
+      client_id: client_id,
+      subject_token: subject_token,
+      subject_token_type: subject_token_type,
+      audience: Map.get(opts, :audience),
+      scope: Map.get(opts, :scope),
+      user_profile: encode_user_profile(Map.get(opts, :user_profile)),
+      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange"
+    }
+
+    post_token(payload, forwarded_for_header(Map.get(opts, :forwarded_for)))
+  end
+
+  # Encoded here rather than in post_form/3: a blanket transform would JSON-encode
+  # fields Auth0 expects flat. This is the only nested value any token grant sends.
+  defp encode_user_profile(nil), do: nil
+  defp encode_user_profile(profile) when is_binary(profile), do: profile
+  defp encode_user_profile(profile), do: Jason.encode!(profile)
+
   defp grant_type_for_realm(nil), do: "password"
   defp grant_type_for_realm(_realm), do: "http://auth0.com/oauth/grant-type/password-realm"
 

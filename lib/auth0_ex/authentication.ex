@@ -112,4 +112,114 @@ defmodule Auth0Ex.Authentication do
       iex> Auth0Ex.Authentication.openid_configuration()
   """
   def openid_configuration, do: do_get(".well-known/openid-configuration", %{})
+
+  @doc """
+  Starts the Device Authorization Flow, for a device with no browser.
+
+  A CLI, a TV app, a headless installer — anything that cannot host a redirect. Show
+  the user the returned `user_code` and `verification_uri` (or send them straight to
+  `verification_uri_complete`, which embeds the code), then poll
+  `Auth0Ex.Authentication.Token.device/3` until they finish.
+
+  Returns `device_code`, `user_code`, `verification_uri`, `verification_uri_complete`,
+  `expires_in` and `interval` — the last being the number of seconds to wait between
+  polls.
+
+  `opts` may carry `:scope` and `:audience`. Include `offline_access` in `scope` to
+  get a refresh token back from the exchange.
+
+  https://auth0.com/docs/api/authentication/device-authorization-flow/authorize-device
+
+      iex> Auth0Ex.Authentication.device_code("a_client_id")
+      iex> Auth0Ex.Authentication.device_code("a_client_id", %{scope: "openid profile offline_access", audience: "https://your-api/"})
+  """
+  def device_code(client_id, opts \\ %{}) when is_map(opts) do
+    %{
+      client_id: client_id,
+      scope: Map.get(opts, :scope),
+      audience: Map.get(opts, :audience)
+    }
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
+    |> then(&do_post_form("oauth/device/code", &1))
+  end
+
+  @doc """
+  Pushes authorization parameters to Auth0 and gets back a reference to them.
+
+  Everything you would put in the query string of `/authorize` goes here instead, over
+  a back-channel POST, so sensitive values never reach the browser. Auth0 answers with
+  a `request_uri`, which you then hand to `Auth0Ex.Authentication.Url.authorize/2`:
+
+      {:ok, %{"request_uri" => request_uri}} =
+        Auth0Ex.Authentication.pushed_authorization_request(client_id, %{
+          client_secret: client_secret,
+          response_type: "code",
+          redirect_uri: "https://app.example.com/callback",
+          scope: "openid profile",
+          state: state
+        })
+
+      Auth0Ex.Authentication.Url.authorize(client_id, %{request_uri: request_uri})
+
+  `response_type` and `redirect_uri` are required alongside `client_id`, and the call
+  must carry client authentication — `client_secret`, or `client_assertion` with
+  `client_assertion_type`. Every parameter must be a string. The response also carries
+  `expires_in`, the seconds the `request_uri` stays valid.
+
+  Auth0 answers `201`, not `200`.
+
+  > #### The reference is named `request_uri` {: .info}
+  >
+  > Auth0's prose for this endpoint says it responds with a `redirect_uri`. The
+  > response schema on the same page says `request_uri`, which is also what RFC 9126
+  > specifies and what the API actually returns.
+
+  Requires an Enterprise plan with the Highly Regulated Identity add-on; without it
+  the call is rejected rather than merely unused.
+
+  https://auth0.com/docs/api/authentication/authorization-code-flow-with-enhanced-privacy-protection/push-authorization-requests
+
+      iex> Auth0Ex.Authentication.pushed_authorization_request("a_client_id", %{client_secret: "a_secret", response_type: "code", redirect_uri: "https://app.example.com/callback"})
+  """
+  def pushed_authorization_request(client_id, opts \\ %{}) when is_map(opts) do
+    opts
+    |> Map.put(:client_id, client_id)
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
+    |> then(&do_post_form("oauth/par", &1))
+  end
+
+  @doc """
+  Revokes a user's sessions and refresh tokens across every application.
+
+  Auth0's implementation of Okta's Universal Logout. Where
+  `Auth0Ex.Management.User.revoke_access/2` works within your tenant using a
+  management token, this is the cross-application, externally-authenticated form.
+
+  **Access tokens are not revoked** — they keep working until they expire. Only session
+  cookies and refresh tokens are destroyed, so a short access-token lifetime is what
+  bounds the delay.
+
+  `subject` requires all three of `format`, `iss` and `sub`. `access_token` is the
+  bearer token the endpoint authenticates with; it is not the management token, and
+  this library does not fetch it for you.
+
+  Unlike the other `/oauth/*` endpoints, this one takes a **JSON** body rather than a
+  form-encoded one — Auth0 documents the encoding per endpoint, not per prefix.
+
+  https://auth0.com/docs/api/authentication/logout/global-token-revocation
+
+      iex> Auth0Ex.Authentication.global_token_revocation(
+      ...>   "Username-Password-Authentication",
+      ...>   %{format: "iss_sub", iss: "https://your-tenant.auth0.com/", sub: "auth0|abc123"},
+      ...>   "an_access_token"
+      ...> )
+  """
+  def global_token_revocation(connection_name, subject, access_token)
+      when is_binary(connection_name) and is_map(subject) do
+    do_post(
+      "oauth/global-token-revocation/connection/#{connection_name}",
+      %{subject: subject},
+      [{"Authorization", "Bearer #{access_token}"}]
+    )
+  end
 end

@@ -42,6 +42,30 @@ Auth0 reference:
 `Url.logout/1` requires `returnTo`, and it must be listed in your tenant's allowed logout URLs.
 `Url.oidc_logout/1` is the OIDC-conformant variant, which takes an `id_token_hint` instead.
 
+### Keeping parameters out of the browser: PAR
+
+Pushed Authorization Requests send the `/authorize` parameters over a back-channel POST and get back a
+reference to them, so nothing sensitive appears in a URL:
+
+```elixir
+{:ok, %{"request_uri" => request_uri}} =
+  Auth0Ex.Authentication.pushed_authorization_request(client_id, %{
+    client_secret: client_secret,
+    response_type: "code",
+    redirect_uri: "https://app.example.com/callback",
+    scope: "openid profile",
+    state: state
+  })
+
+Url.authorize(client_id, %{request_uri: request_uri})
+```
+
+The response also carries `expires_in`, the seconds the reference stays valid. Requires an Enterprise plan
+with the Highly Regulated Identity add-on.
+
+Auth0 reference:
+[PAR](https://auth0.com/docs/api/authentication/authorization-code-flow-with-enhanced-privacy-protection/push-authorization-requests).
+
 ### Public clients: PKCE
 
 A SPA or mobile app has no client secret. Pass `code_challenge` and `code_challenge_method` to
@@ -93,6 +117,82 @@ Send `send: "link"` instead and the user follows the link; there is no second ca
 Auth0 reference:
 [start](https://auth0.com/docs/api/authentication/passwordless/get-code-or-link),
 [authenticate](https://auth0.com/docs/api/authentication/passwordless/authenticate-user).
+
+## Devices with no browser
+
+A CLI, a TV app, a headless installer — anything that cannot host a redirect. The device shows a code, the
+user types it in on their phone, and the device polls until they are done.
+
+```elixir
+{:ok, start} = Auth0Ex.Authentication.device_code(client_id, %{
+  scope: "openid profile offline_access",
+  audience: "https://your-api/"
+})
+
+IO.puts("Go to #{start["verification_uri"]} and enter #{start["user_code"]}")
+```
+
+Then poll. **The errors here are the flow working, not failing** — `authorization_pending` means the user
+has not finished yet, and `slow_down` means you are polling faster than `interval`:
+
+```elixir
+def poll(client_id, device_code, interval) do
+  case Token.device(client_id, device_code) do
+    {:ok, tokens} ->
+      {:ok, tokens}
+
+    {:error, %Auth0Ex.Error{body: %{"error" => "authorization_pending"}}} ->
+      Process.sleep(interval * 1000)
+      poll(client_id, device_code, interval)
+
+    {:error, %Auth0Ex.Error{body: %{"error" => "slow_down"}}} ->
+      Process.sleep((interval + 5) * 1000)
+      poll(client_id, device_code, interval + 5)
+
+    {:error, error} ->
+      {:error, error}
+  end
+end
+
+poll(client_id, start["device_code"], start["interval"])
+```
+
+> #### Bailing on the first error never completes the login {: .warning}
+>
+> `authorization_pending` arrives as `{:error, %Auth0Ex.Error{}}` like anything else, because that is what
+> Auth0 returns. Match on the code in `body`, not on the tuple. `expired_token` and `access_denied` are the
+> terminal ones — the codes ran out, or the user refused.
+
+`verification_uri_complete` embeds the user code, so a device that can render a QR code can skip the
+typing entirely. Include `offline_access` in `scope` to get a refresh token from the exchange.
+
+Auth0 reference:
+[device flow](https://auth0.com/docs/api/authentication/device-authorization-flow/authorize-device).
+
+## Native social sign-in
+
+When a mobile SDK has already authenticated the user — Sign In with Apple, say — exchange the artifact it
+returns for Auth0 tokens, with no further user interaction:
+
+```elixir
+Token.native_social(
+  client_id,
+  apple_authorization_code,
+  "http://auth0.com/oauth/token-type/apple-authz-code",
+  %{user_profile: %{name: %{firstName: "John", lastName: "Smith"}}}
+)
+```
+
+`user_profile` is a nested object in a form-encoded body, which has no representation for one — Auth0 takes
+it as JSON in a single field, and this library encodes it for you.
+
+Omit `scope` and you get every scope defined for the audience, because this grant implies trust in the
+application. The issued set can differ from the requested one; read `scope` in the response.
+
+Auth0 discourages this flow outside a genuine native social setting.
+
+Auth0 reference:
+[native social](https://auth0.com/docs/api/authentication/token-exchange-for-native-social/token-exchange-native-social).
 
 ## Signing users up and resetting passwords
 
