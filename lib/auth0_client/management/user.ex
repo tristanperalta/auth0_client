@@ -25,10 +25,8 @@ defmodule Auth0Client.Management.User do
       iex> Auth0Client.Management.User.all(fields: "name", q: "app_metadata.admin:'true'")
   """
   def all(params \\ %{}) when is_map(params) or is_list(params) do
-    params
-    |> Enum.into(%{})
-    |> Map.put_new(:search_engine, "v3")
-    |> then(&do_get(@path, &1))
+    params = Enum.into(params, %{})
+    do_get(@path, Map.put_new(params, :search_engine, "v3"))
   end
 
   @doc """
@@ -47,10 +45,8 @@ defmodule Auth0Client.Management.User do
   """
   def by_email(email, params \\ %{}) when is_binary(email) do
     # Auth0 puts this on its own top-level path rather than under /users.
-    params
-    |> Enum.into(%{})
-    |> Map.put(:email, email)
-    |> then(&do_get("users-by-email", &1))
+    params = Enum.into(params, %{})
+    do_get("users-by-email", Map.put(params, :email, email))
   end
 
   @doc """

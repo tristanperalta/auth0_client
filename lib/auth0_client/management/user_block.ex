@@ -17,10 +17,8 @@ defmodule Auth0Client.Management.UserBlock do
       iex> Auth0Client.Management.UserBlock.get("some@example.com", consider_brute_force_enablement: true)
   """
   def get(identifier, params \\ %{}) when is_binary(identifier) do
-    params
-    |> Enum.into(%{})
-    |> Map.put(:identifier, identifier)
-    |> then(&do_get(@path, &1))
+    params = Enum.into(params, %{})
+    do_get(@path, Map.put(params, :identifier, identifier))
   end
 
   @doc """
