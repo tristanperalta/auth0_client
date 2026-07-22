@@ -9,11 +9,23 @@ defmodule Auth0Client.Config do
   def domain do
     auth0_domain = Application.get_env(:auth0_client, :domain)
 
-    if String.ends_with?(auth0_domain, "auth0.com") or custom_domain?() do
-      auth0_domain
-    else
-      raise ArgumentError,
-            "the domain specified must be a fully qualified domain name, it should be : <your_tenant>[.optional_region].auth0.com, not just <your_tenant>"
+    cond do
+      # Must come first: `or` evaluates left to right, so String.ends_with?/2 would
+      # raise on a nil domain before custom_domain?/0 was ever consulted.
+      is_nil(auth0_domain) ->
+        raise ArgumentError,
+              "no :domain is configured. Set it with `config :auth0_client, domain: " <>
+                "\"your-tenant.auth0.com\"`, or from the environment if that is where you keep it"
+
+      not is_binary(auth0_domain) ->
+        raise ArgumentError, ":domain must be a string, got: #{inspect(auth0_domain)}"
+
+      String.ends_with?(auth0_domain, "auth0.com") or custom_domain?() ->
+        auth0_domain
+
+      true ->
+        raise ArgumentError,
+              "the domain specified must be a fully qualified domain name, it should be : <your_tenant>[.optional_region].auth0.com, not just <your_tenant>"
     end
   end
 

@@ -36,8 +36,8 @@ defmodule Auth0Client.Authentication.Url do
   def authorize(client_id, params \\ %{}) do
     params
     |> Enum.into(%{})
-    |> Map.put(:client_id, client_id)
-    |> Map.put_new(:response_type, "code")
+    |> put_param(:client_id, client_id)
+    |> put_new_param(:response_type, "code")
     |> build("authorize")
   end
 
@@ -77,6 +77,22 @@ defmodule Auth0Client.Authentication.Url do
     params
     |> Enum.into(%{})
     |> build("oidc/logout")
+  end
+
+  # authorize/2 sets two parameters itself, and a caller may spell either as a
+  # string key — the moduledoc promises parameters are passed through unfiltered.
+  # Without checking both spellings, URI.encode_query/1 emits the parameter twice.
+  # logout/1 checks both spellings of returnTo for the same reason.
+  #
+  # client_id is positional and documented, so it wins over a string-keyed one.
+  defp put_param(params, key, value) do
+    params |> Map.delete(to_string(key)) |> Map.put(key, value)
+  end
+
+  defp put_new_param(params, key, value) do
+    if Map.has_key?(params, key) or Map.has_key?(params, to_string(key)),
+      do: params,
+      else: Map.put(params, key, value)
   end
 
   defp build(params, path) do

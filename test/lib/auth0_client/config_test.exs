@@ -37,6 +37,31 @@ defmodule Auth0Client.ConfigTest do
         end
       )
     end
+
+    # config/dev.exs and the README both read the domain from System.get_env/1,
+    # so an unset AUTH0_DOMAIN is the first thing a new user hits. It used to
+    # raise FunctionClauseError from String.ends_with?/2, naming neither the
+    # setting nor the fix.
+    test "an unset domain names the setting rather than crashing in String" do
+      Application.delete_env(:auth0_client, :domain)
+
+      assert_raise ArgumentError, ~r/no :domain is configured/, fn -> Config.domain() end
+    end
+
+    # `or` evaluates left to right, so String.ends_with?(nil, _) used to raise
+    # before custom_domain? was ever consulted.
+    test "an unset domain reports the same with a custom domain configured" do
+      Application.put_env(:auth0_client, :custom_domain, true)
+      Application.delete_env(:auth0_client, :domain)
+
+      assert_raise ArgumentError, ~r/no :domain is configured/, fn -> Config.domain() end
+    end
+
+    test "a non-binary domain is rejected as such" do
+      Application.put_env(:auth0_client, :domain, :brighterlink)
+
+      assert_raise ArgumentError, ~r/:domain must be a string/, fn -> Config.domain() end
+    end
   end
 
   describe "mgmt_client_id/0" do

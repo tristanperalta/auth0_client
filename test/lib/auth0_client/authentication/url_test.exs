@@ -11,6 +11,11 @@ defmodule Auth0Client.Authentication.UrlTest do
 
   defp path(url), do: url |> URI.parse() |> Map.get(:path)
 
+  # Counts on the raw URL, deliberately. query/1 goes through URI.decode_query/1,
+  # which keeps only the last value per key — so a duplicated parameter is
+  # invisible to it.
+  defp occurrences(url, fragment), do: length(String.split(url, fragment)) - 1
+
   describe "authorize/2" do
     test "hangs off the tenant root" do
       url = Url.authorize("a_client_id")
@@ -27,6 +32,43 @@ defmodule Auth0Client.Authentication.UrlTest do
     test "an explicit response_type wins" do
       assert %{"response_type" => "token"} =
                query(Url.authorize("a_client_id", %{response_type: "token"}))
+    end
+
+    # authorize/2 sets client_id and response_type itself, so a caller spelling
+    # either as a string key used to get both spellings encoded. Count occurrences
+    # in the raw URL: URI.decode_query/1 keeps only the last value per key, so a
+    # duplicate is invisible to query/1.
+    test "a string-keyed response_type overrides rather than duplicating" do
+      url = Url.authorize("a_client_id", %{"response_type" => "token"})
+
+      assert occurrences(url, "response_type=") == 1
+      assert query(url)["response_type"] == "token"
+    end
+
+    test "a string-keyed client_id does not duplicate, and the argument wins" do
+      url = Url.authorize("a_client_id", %{"client_id" => "ignored"})
+
+      assert occurrences(url, "client_id=") == 1
+      assert query(url)["client_id"] == "a_client_id"
+    end
+
+    test "a mix of string and atom keys emits each parameter once" do
+      url =
+        Url.authorize("a_client_id", %{
+          "response_type" => "id_token",
+          :scope => "openid",
+          "state" => "opaque"
+        })
+
+      assert occurrences(url, "response_type=") == 1
+      assert occurrences(url, "client_id=") == 1
+
+      assert %{
+               "response_type" => "id_token",
+               "client_id" => "a_client_id",
+               "scope" => "openid",
+               "state" => "opaque"
+             } = query(url)
     end
 
     test "passes through the common parameters" do
