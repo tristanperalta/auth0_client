@@ -5,6 +5,33 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-07-22
+
+### Fixed
+
+- **`Auth0Client.Config.domain/0` raised the wrong error when `domain` was unset.** It called
+  `String.ends_with?/2` on `nil`, so you got a `FunctionClauseError` naming a `String` function instead of
+  the `ArgumentError` naming the setting. Since the README and `config/dev.exs` both read the domain from
+  `System.get_env("AUTH0_DOMAIN")`, this is what an unset environment variable produced. A non-binary
+  `domain` now says so too, and `custom_domain: true` with no domain reports the missing setting rather
+  than crashing.
+- **`Auth0Client.Authentication.Url.authorize/2` emitted duplicate query parameters** when `client_id` or
+  `response_type` was passed as a string key, because it only ever checked for atom keys:
+
+  ```
+  authorize("cid", %{"response_type" => "token"})
+  #=> ...?client_id=cid&response_type=code&response_type=token   # before
+  #=> ...?client_id=cid&response_type=token                      # after
+  ```
+
+  Both spellings are now honoured, matching `logout/1`, which already checked both for `returnTo`. The
+  positional `client_id` argument wins over a string-keyed one.
+
+### Added
+
+- **`Auth0Client.Utils.bearer/1`**, the `Authorization` header list for a bearer token. Already used
+  internally for both the management token and caller-supplied tokens.
+
 ## [1.0.0] — 2026-07-22
 
 First release of this fork of [techgaun/auth0_ex](https://github.com/techgaun/auth0_ex), whose last release
@@ -125,4 +152,5 @@ Then, in order of how quietly each one fails:
    `email` in `opts`. Both changed shape rather than name; a guard turns an unmigrated `signup` call into a
    `FunctionClauseError` rather than a wrong request.
 
+[1.1.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.1.0
 [1.0.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.0.0
