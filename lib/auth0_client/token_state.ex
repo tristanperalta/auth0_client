@@ -94,12 +94,7 @@ defmodule Auth0Client.TokenState do
   end
 
   defp resolve(state, result) do
-    reply =
-      case result do
-        {:ok, token, _exp} -> {:ok, token}
-        {:error, _error} = error -> error
-      end
-
+    reply = reply_for(result)
     Enum.each(state.waiters, &GenServer.reply(&1, reply))
 
     state = %{state | fetching?: false, waiters: [], task_ref: nil}
@@ -109,6 +104,10 @@ defmodule Auth0Client.TokenState do
       _ -> state
     end
   end
+
+  # Bound once above the Enum.each rather than computed per waiter.
+  defp reply_for({:ok, token, _exp}), do: {:ok, token}
+  defp reply_for({:error, _error} = error), do: error
 
   # Runs in a task, off the GenServer, so a slow fetch does not block callers
   # holding a still-valid token.

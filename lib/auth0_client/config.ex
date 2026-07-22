@@ -71,10 +71,7 @@ defmodule Auth0Client.Config do
   """
   @spec dangerously_disable_tls_verification?() :: boolean
   def dangerously_disable_tls_verification? do
-    Application.get_env(:auth0_client, :dangerously_disable_tls_verification, false) in [
-      true,
-      "true"
-    ]
+    flag?(:dangerously_disable_tls_verification)
   end
 
   @doc """
@@ -151,7 +148,9 @@ defmodule Auth0Client.Config do
       "Auth0Client <https://github.com/tristanperalta/auth0_client>"
   end
 
-  defp custom_domain? do
-    Application.get_env(:auth0_client, :custom_domain, false) in [true, "true"]
-  end
+  defp custom_domain?, do: flag?(:custom_domain)
+
+  # Accepts "true" as well as true, so a value read straight out of an environment
+  # variable behaves the same way as a literal.
+  defp flag?(key), do: Application.get_env(:auth0_client, key, false) in [true, "true"]
 end

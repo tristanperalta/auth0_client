@@ -12,7 +12,6 @@ defmodule Auth0Client.Parser do
 
   alias Auth0Client.Error
 
-  @type status_code :: non_neg_integer
   @type body :: map | list | binary
   @type response :: {:ok, body} | :ok | {:error, Error.t()}
 

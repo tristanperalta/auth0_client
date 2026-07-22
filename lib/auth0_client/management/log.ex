@@ -23,6 +23,8 @@ defmodule Auth0Client.Management.Log do
 
   @doc """
   Get a log event by id
+
+      iex> Auth0Client.Management.Log.get("90020200000000000000000000000000000000000000000000")
   """
   def get(id) do
     do_get("#{@path}/#{id}")

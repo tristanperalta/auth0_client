@@ -39,6 +39,8 @@ defmodule Auth0Client.Management.ResourceServer do
 
   @doc """
   Updates a resource server
+
+      iex> Auth0Client.Management.ResourceServer.update("resserver", %{name: "Orders API"})
   """
   def update(id, body) do
     do_patch("#{@path}/#{id}", body)

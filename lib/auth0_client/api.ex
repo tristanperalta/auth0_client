@@ -31,7 +31,7 @@ defmodule Auth0Client.Api do
 
       @doc false
       def do_get(path, params \\ %{}, extra_headers \\ []) do
-        do_request(:get, path, Enum.into(params, %{}), "", extra_headers)
+        do_request(:get, path, params, "", extra_headers)
       end
 
       @doc false
@@ -75,7 +75,7 @@ defmodule Auth0Client.Api do
 
       @doc false
       def do_delete(path, params \\ %{}, extra_headers \\ []) do
-        do_request(:delete, path, Enum.into(params, %{}), "", extra_headers)
+        do_request(:delete, path, params, "", extra_headers)
       end
 
       # Several RBAC endpoints send their payload in the body of a DELETE. Unusual
@@ -96,7 +96,7 @@ defmodule Auth0Client.Api do
         if Keyword.keyword?(body), do: Map.new(body), else: body
       end
 
-      defp do_request(method, path, params \\ %{}, req_body \\ "", extra_headers \\ []) do
+      defp do_request(method, path, params, req_body, extra_headers) do
         Auth0Client.Api.request(
           unquote(opts[:for]),
           method,

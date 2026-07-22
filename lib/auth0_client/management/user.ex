@@ -147,7 +147,7 @@ defmodule Auth0Client.Management.User do
   @doc """
     List the roles associated with a user. Scopes: read:users read:roles
 
-      iex > Auth0Client.Management.User.roles("auth0|23423")
+      iex> Auth0Client.Management.User.roles("auth0|23423")
   """
   def roles(user_id, params \\ %{}) do
     do_get("#{@path}/#{user_id}/roles", params)
@@ -273,7 +273,7 @@ defmodule Auth0Client.Management.User do
   @doc """
     Deletes all users MFA authentication methods. Scopes: delete:authentication_methods
 
-      iex > Auth0Client.Management.User.delete_authentication_methods("auth0|23423")
+      iex> Auth0Client.Management.User.delete_authentication_methods("auth0|23423")
   """
   def delete_authentication_methods(user_id) do
     do_delete("#{@path}/#{user_id}/authentication-methods")
