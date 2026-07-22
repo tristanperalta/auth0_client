@@ -3,30 +3,22 @@ defmodule Auth0Client.UtilsTest do
   use ExUnit.Case, async: false
   use Auth0Client.ReqCase
 
+  import Auth0Client.EnvCase
+
   alias Auth0Client.TokenState
   alias Auth0Client.Utils
 
   setup do
-    original = %{
-      mgmt_token: Application.get_env(:auth0_client, :mgmt_token),
-      mgmt_client_id: Application.get_env(:auth0_client, :mgmt_client_id),
-      mgmt_client_secret: Application.get_env(:auth0_client, :mgmt_client_secret),
-      user_agent: Application.get_env(:auth0_client, :user_agent),
-      http_opts: Application.get_env(:auth0_client, :http_opts)
-    }
-
     TokenState.invalidate()
+    on_exit(&TokenState.invalidate/0)
 
-    on_exit(fn ->
-      Enum.each(original, fn
-        {key, nil} -> Application.delete_env(:auth0_client, key)
-        {key, value} -> Application.put_env(:auth0_client, key, value)
-      end)
-
-      TokenState.invalidate()
-    end)
-
-    :ok
+    restore_env_on_exit([
+      :mgmt_token,
+      :mgmt_client_id,
+      :mgmt_client_secret,
+      :user_agent,
+      :http_opts
+    ])
   end
 
   describe "base_url/0,1" do

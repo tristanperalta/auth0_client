@@ -6,29 +6,24 @@ defmodule Auth0Client.TokenStateTest do
   use ExUnit.Case, async: false
   use Auth0Client.ReqCase
 
+  import Auth0Client.EnvCase
+
   alias Auth0Client.TokenState
 
   setup do
-    original = %{
-      mgmt_token: Application.get_env(:auth0_client, :mgmt_token),
-      token_refresh_skew: Application.get_env(:auth0_client, :token_refresh_skew)
-    }
+    on_exit(&TokenState.invalidate/0)
+
+    restore_env_on_exit([
+      :mgmt_token,
+      :token_refresh_skew,
+      :mgmt_client_id,
+      :mgmt_client_secret
+    ])
 
     Application.delete_env(:auth0_client, :mgmt_token)
     Application.put_env(:auth0_client, :mgmt_client_id, "a_client_id")
     Application.put_env(:auth0_client, :mgmt_client_secret, "a_client_secret")
     TokenState.invalidate()
-
-    on_exit(fn ->
-      Enum.each(original, fn
-        {key, nil} -> Application.delete_env(:auth0_client, key)
-        {key, value} -> Application.put_env(:auth0_client, key, value)
-      end)
-
-      Application.delete_env(:auth0_client, :mgmt_client_id)
-      Application.delete_env(:auth0_client, :mgmt_client_secret)
-      TokenState.invalidate()
-    end)
 
     :ok
   end

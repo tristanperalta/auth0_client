@@ -1,18 +1,19 @@
 defmodule Auth0Client.ConfigTest do
   use ExUnit.Case
 
+  import Auth0Client.EnvCase
+
   alias Auth0Client.Config
+
+  defp put_verify(verify) do
+    Application.put_env(:auth0_client, :http_opts,
+      connect_options: [transport_opts: [verify: verify]]
+    )
+  end
 
   describe "domain/0" do
     setup do
-      original = Application.get_env(:auth0_client, :domain)
-
-      on_exit(fn ->
-        Application.put_env(:auth0_client, :domain, original)
-        Application.put_env(:auth0_client, :custom_domain, false)
-      end)
-
-      :ok
+      restore_env_on_exit([:domain, :custom_domain])
     end
 
     test "domain is returned" do
@@ -66,9 +67,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "mgmt_client_id/0" do
     setup do
-      original = Application.get_env(:auth0_client, :mgmt_client_id)
-      on_exit(fn -> Application.put_env(:auth0_client, :mgmt_client_id, original) end)
-      :ok
+      restore_env_on_exit([:mgmt_client_id])
     end
 
     test "returns the set value" do
@@ -84,9 +83,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "mgmt_client_secret/0" do
     setup do
-      original = Application.get_env(:auth0_client, :mgmt_client_secret)
-      on_exit(fn -> Application.put_env(:auth0_client, :mgmt_client_secret, original) end)
-      :ok
+      restore_env_on_exit([:mgmt_client_secret])
     end
 
     test "returns the set value" do
@@ -102,9 +99,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "mgmt_token/0" do
     setup do
-      original = Application.get_env(:auth0_client, :mgmt_token)
-      on_exit(fn -> Application.put_env(:auth0_client, :mgmt_token, original) end)
-      :ok
+      restore_env_on_exit([:mgmt_token])
     end
 
     test "returns the set value" do
@@ -120,9 +115,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "http_opts/0" do
     setup do
-      original = Application.get_env(:auth0_client, :http_opts)
-      on_exit(fn -> Application.put_env(:auth0_client, :http_opts, original) end)
-      :ok
+      restore_env_on_exit([:http_opts])
     end
 
     test "returns the set value" do
@@ -138,28 +131,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "http_opts/0 TLS verification" do
     setup do
-      original = Application.get_env(:auth0_client, :http_opts)
-      original_opt_in = Application.get_env(:auth0_client, :dangerously_disable_tls_verification)
-
-      on_exit(fn ->
-        Application.put_env(:auth0_client, :http_opts, original)
-
-        case original_opt_in do
-          nil ->
-            Application.delete_env(:auth0_client, :dangerously_disable_tls_verification)
-
-          value ->
-            Application.put_env(:auth0_client, :dangerously_disable_tls_verification, value)
-        end
-      end)
-
-      :ok
-    end
-
-    defp put_verify(verify) do
-      Application.put_env(:auth0_client, :http_opts,
-        connect_options: [transport_opts: [verify: verify]]
-      )
+      restore_env_on_exit([:http_opts, :dangerously_disable_tls_verification])
     end
 
     test "verify_none raises" do
@@ -242,29 +214,11 @@ defmodule Auth0Client.ConfigTest do
 
   describe "warn_if_tls_verification_disabled/0" do
     setup do
-      original = Application.get_env(:auth0_client, :http_opts)
-      original_opt_in = Application.get_env(:auth0_client, :dangerously_disable_tls_verification)
-
-      on_exit(fn ->
-        Application.put_env(:auth0_client, :http_opts, original)
-
-        case original_opt_in do
-          nil ->
-            Application.delete_env(:auth0_client, :dangerously_disable_tls_verification)
-
-          value ->
-            Application.put_env(:auth0_client, :dangerously_disable_tls_verification, value)
-        end
-      end)
-
-      :ok
+      restore_env_on_exit([:http_opts, :dangerously_disable_tls_verification])
     end
 
     test "warns when verification is deliberately disabled" do
-      Application.put_env(:auth0_client, :http_opts,
-        connect_options: [transport_opts: [verify: :verify_none]]
-      )
-
+      put_verify(:verify_none)
       Application.put_env(:auth0_client, :dangerously_disable_tls_verification, true)
 
       log =
@@ -289,9 +243,7 @@ defmodule Auth0Client.ConfigTest do
 
   describe "user_agent/0" do
     setup do
-      original = Application.get_env(:auth0_client, :user_agent)
-      on_exit(fn -> Application.put_env(:auth0_client, :user_agent, original) end)
-      :ok
+      restore_env_on_exit([:user_agent])
     end
 
     test "returns the set value" do
