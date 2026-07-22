@@ -52,7 +52,7 @@ defmodule Auth0Client.Management.UserBlockTest do
 
   describe "unblock/1" do
     test "deletes the blocks for an identifier and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = UserBlock.unblock("some@example.com")
 
@@ -65,7 +65,7 @@ defmodule Auth0Client.Management.UserBlockTest do
 
   describe "unblock_user/1" do
     test "deletes the user's blocks and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = UserBlock.unblock_user("auth0|2342")
 

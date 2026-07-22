@@ -46,6 +46,29 @@ defmodule Auth0Client.ReqCase do
   end
 
   @doc """
+  Captures the request and replies with `status` and an empty body.
+
+  For the 202 and 204 answers Auth0 gives to mutations that return nothing.
+
+      stub_status(204)
+  """
+  def stub_status(status) do
+    stub_request(fn conn -> Plug.Conn.send_resp(conn, status, "") end)
+  end
+
+  @doc """
+  Captures the request and replies with `status` and a JSON body.
+
+  `stub_request/1` alone always answers 200, so this is for the endpoints that
+  answer 201 or 202 with content.
+
+      stub_json(201, %{"id" => "abc"})
+  """
+  def stub_json(status, body \\ %{}) do
+    stub_request(fn conn -> conn |> Plug.Conn.put_status(status) |> Req.Test.json(body) end)
+  end
+
+  @doc """
   Returns the request captured by `stub_request/1`.
   """
   defmacro assert_receive_request do
@@ -79,14 +102,16 @@ defmodule Auth0Client.ReqCase do
   end
 
   defp describe(conn, body) do
+    content_type = content_type(conn)
+
     %{
       method: conn.method,
       path: conn.request_path,
       query: URI.decode_query(conn.query_string),
       query_string: conn.query_string,
       headers: conn.req_headers,
-      content_type: content_type(conn),
-      body: decode_body(body, content_type(conn))
+      content_type: content_type,
+      body: decode_body(body, content_type)
     }
   end
 

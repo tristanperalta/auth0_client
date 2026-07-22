@@ -4,8 +4,6 @@ defmodule Auth0Client.Management.GrantTest do
 
   alias Auth0Client.Management.Grant
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "all/1" do
     test "gets all grants" do
       stub_request([%{"id" => "cgr_1", "clientID" => "abc"}])
@@ -44,7 +42,7 @@ defmodule Auth0Client.Management.GrantTest do
 
   describe "delete/1" do
     test "deletes one grant by id, in the path" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Grant.delete("cgr_1")
 
@@ -59,7 +57,7 @@ defmodule Auth0Client.Management.GrantTest do
     # Auth0 takes the user id as a query parameter here, not a path segment —
     # the shape most likely to be got wrong.
     test "sends user_id as a query param, not a path segment" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Grant.delete_by_user("auth0|abc123")
 
@@ -70,7 +68,7 @@ defmodule Auth0Client.Management.GrantTest do
     end
 
     test "does not put the user id in the path" do
-      stub_request(empty(204))
+      stub_status(204)
       Grant.delete_by_user("auth0|abc123")
 
       refute assert_receive_request().path =~ "auth0|abc123"

@@ -7,8 +7,6 @@ defmodule Auth0Client.Management.OrganizationTest do
   @org_id "org_abc123"
   @user_id "auth0|user1"
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "all/1" do
     test "gets all organizations" do
       stub_request([%{"id" => @org_id, "name" => "acme-corp"}])
@@ -88,7 +86,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "deletes the organization" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.delete(@org_id)
 
@@ -117,7 +115,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "add_members/2 posts the user ids" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.add_members(@org_id, [@user_id, "auth0|user2"])
 
@@ -128,7 +126,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_members/2 sends the user ids in the body of a DELETE" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_members(@org_id, [@user_id])
 
@@ -151,7 +149,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "assign_member_roles/3 posts the role ids" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.assign_member_roles(@org_id, @user_id, ["rol_1"])
 
@@ -162,7 +160,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_member_roles/3 sends the role ids in the body of a DELETE" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_member_roles(@org_id, @user_id, ["rol_1"])
 
@@ -256,7 +254,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "delete_invitation/2 revokes it" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.delete_invitation(@org_id, "inv_1")
 
@@ -320,7 +318,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_connection/2 deletes it" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_connection(@org_id, "con_1")
 
@@ -355,7 +353,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_client_grant/2 takes the id in the path, not the body" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_client_grant(@org_id, "cgr_1")
 
@@ -423,7 +421,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_discovery_domain/2 deletes it" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_discovery_domain(@org_id, "dom_1")
 
@@ -455,7 +453,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "assign_group_roles/3 posts the role ids" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.assign_group_roles(@org_id, "grp_1", ["rol_1"])
 
@@ -466,7 +464,7 @@ defmodule Auth0Client.Management.OrganizationTest do
     end
 
     test "remove_group_roles/3 sends the role ids in the body of a DELETE" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Organization.remove_group_roles(@org_id, "grp_1", ["rol_1"])
 

@@ -43,7 +43,7 @@ defmodule Auth0Client.Management.SessionTest do
   # different consequences.
   describe "delete/1 and revoke/1" do
     test "delete/1 deletes the session and accepts a 202" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 202, "") end)
+      stub_status(202)
 
       assert :ok = Session.delete("sess_1")
 
@@ -53,7 +53,7 @@ defmodule Auth0Client.Management.SessionTest do
     end
 
     test "revoke/1 posts to the revoke path and accepts a 202" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 202, "") end)
+      stub_status(202)
 
       assert :ok = Session.revoke("sess_1")
 

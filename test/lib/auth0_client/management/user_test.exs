@@ -166,7 +166,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.delete("auth0|123")
 
@@ -213,7 +213,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "delete_mfprovider/2" do
     test "deletes the multifactor provider" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.delete_mfprovider("auth0|23423", "duo")
 
@@ -303,7 +303,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "assign_roles/2" do
     test "posts the role ids" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.assign_roles("auth0|123", ["rol_1", "rol_2"])
 
@@ -316,7 +316,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "remove_roles/2" do
     test "sends the role ids in the body of a DELETE" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.remove_roles("auth0|123", ["rol_1"])
 
@@ -341,7 +341,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "assign_permissions/2" do
     test "posts permissions given as tuples" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      stub_status(201)
 
       assert :ok =
                User.assign_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
@@ -361,11 +361,11 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "the map form sends the same body as the tuple shorthand" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      stub_status(201)
       User.assign_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
       from_tuple = assert_receive_request().body
 
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      stub_status(201)
 
       User.assign_permissions("auth0|123", [
         %{resource_server_identifier: "https://api.example.com", permission_name: "read:users"}
@@ -377,7 +377,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "remove_permissions/2" do
     test "sends the permissions in the body of a DELETE" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok =
                User.remove_permissions("auth0|123", [{"https://api.example.com", "read:users"}])
@@ -505,7 +505,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "delete_authentication_method/2 deletes one" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.delete_authentication_method("auth0|123", "aum_1")
 
@@ -533,7 +533,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "MFA reset" do
     test "delete_authenticators/1 clears every authenticator" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.delete_authenticators("auth0|123")
 
@@ -543,7 +543,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "invalidate_remember_browser/1 forces the next login to prompt" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.invalidate_remember_browser("auth0|123")
 
@@ -569,7 +569,7 @@ defmodule Auth0Client.Management.UserTest do
 
     # These answer 202, which only became a success case recently.
     test "delete_sessions/1 signs the user out everywhere" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = User.delete_sessions("auth0|123")
 
@@ -590,7 +590,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "delete_refresh_tokens/1 revokes them" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = User.delete_refresh_tokens("auth0|123")
 
@@ -600,7 +600,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "revoke_access/2 revokes sessions and tokens together" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = User.revoke_access("auth0|123", %{preserve_refresh_tokens: true})
 
@@ -611,7 +611,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "revoke_access/1 defaults to an empty body" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = User.revoke_access("auth0|123")
 
@@ -642,7 +642,7 @@ defmodule Auth0Client.Management.UserTest do
     end
 
     test "clear_risk_assessments/2 posts to the clear path" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.clear_risk_assessments("auth0|123", %{assessors: ["NewDevice"]})
 
@@ -655,7 +655,7 @@ defmodule Auth0Client.Management.UserTest do
 
   describe "delete_authentication_methods/1" do
     test "deletes all authentication methods" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = User.delete_authentication_methods("auth0|23423")
 

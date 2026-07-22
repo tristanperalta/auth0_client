@@ -302,14 +302,7 @@ defmodule Auth0Client.AuthenticationTest do
 
   describe "pushed_authorization_request/1,2" do
     test "posts the authorization parameters and accepts a 201" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(
-          201,
-          ~s({"request_uri":"urn:ietf:params:oauth:request_uri:x","expires_in":90})
-        )
-      end)
+      stub_json(201, %{"request_uri" => "urn:ietf:params:oauth:request_uri:x", "expires_in" => 90})
 
       assert {:ok, %{"request_uri" => "urn:ietf:params:oauth:request_uri:x"}} =
                Authentication.pushed_authorization_request("a_client_id", %{
@@ -336,7 +329,7 @@ defmodule Auth0Client.AuthenticationTest do
     # The only /oauth/* endpoint this library calls that takes JSON rather than a
     # form-encoded body, and the only one authenticated by a caller-supplied token.
     test "sends a JSON body with the caller's bearer token" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+      stub_status(200)
 
       subject = %{format: "iss_sub", iss: "https://tenant.auth0.com/", sub: "auth0|abc123"}
 

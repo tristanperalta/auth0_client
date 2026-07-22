@@ -84,7 +84,7 @@ defmodule Auth0Client.Authentication.MfaTest do
 
   describe "delete_authenticator/2" do
     test "deletes by id with the caller's bearer token" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Mfa.delete_authenticator(@access_token, "totp|dev_1")
 

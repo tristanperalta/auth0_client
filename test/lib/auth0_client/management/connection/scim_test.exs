@@ -39,11 +39,7 @@ defmodule Auth0Client.Management.Connection.ScimTest do
 
   describe "create/2" do
     test "posts the configuration and accepts a 201" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(201, ~s({"connection_id":"con_123"}))
-      end)
+      stub_json(201, %{"connection_id" => "con_123"})
 
       assert {:ok, %{"connection_id" => "con_123"}} =
                Scim.create("con_123", %{
@@ -62,7 +58,7 @@ defmodule Auth0Client.Management.Connection.ScimTest do
     end
 
     test "defaults to an empty body" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      stub_status(201)
 
       assert :ok = Scim.create("con_123")
 
@@ -89,7 +85,7 @@ defmodule Auth0Client.Management.Connection.ScimTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Scim.delete("con_123")
 
@@ -123,11 +119,7 @@ defmodule Auth0Client.Management.Connection.ScimTest do
     end
 
     test "create_token/2 posts scopes and accepts a 201" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(201, ~s({"token":"secret","token_id":"tok_1"}))
-      end)
+      stub_json(201, %{"token" => "secret", "token_id" => "tok_1"})
 
       assert {:ok, %{"token" => "secret"}} =
                Scim.create_token("con_123", %{scopes: ["get:users"], token_lifetime: 86_400})
@@ -139,7 +131,7 @@ defmodule Auth0Client.Management.Connection.ScimTest do
     end
 
     test "delete_token/2 addresses the token by id" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Scim.delete_token("con_123", "tok_1")
 

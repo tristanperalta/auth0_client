@@ -42,7 +42,7 @@ defmodule Auth0Client.Management.GroupTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Group.delete("grp_1")
 
@@ -86,7 +86,7 @@ defmodule Auth0Client.Management.GroupTest do
 
   describe "add_roles/2" do
     test "posts the role ids and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Group.add_roles("grp_1", ["rol_1", "rol_2"])
 
@@ -101,7 +101,7 @@ defmodule Auth0Client.Management.GroupTest do
     # Auth0 documents a request body on this DELETE. do_delete/3 would silently turn
     # the payload into query params instead, so the body assertion is the point.
     test "sends the role ids in the DELETE body, not the query string" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Group.remove_roles("grp_1", ["rol_1"])
 

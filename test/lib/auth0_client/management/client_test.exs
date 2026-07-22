@@ -84,7 +84,7 @@ defmodule Auth0Client.Management.ClientTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Client.delete("abc123")
 
@@ -145,9 +145,7 @@ defmodule Auth0Client.Management.ClientTest do
     end
 
     test "create_credential/2 posts the credential" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"id" => "cred_1"})
-      end)
+      stub_json(201, %{"id" => "cred_1"})
 
       assert {:ok, %{"id" => "cred_1"}} =
                Client.create_credential("abc123", %{
@@ -165,9 +163,7 @@ defmodule Auth0Client.Management.ClientTest do
 
     # Auth0 answers this PATCH with 201 rather than 200.
     test "update_credential/3 patches expires_at and accepts a 201" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"id" => "cred_1"})
-      end)
+      stub_json(201, %{"id" => "cred_1"})
 
       assert {:ok, %{"id" => "cred_1"}} =
                Client.update_credential("abc123", "cred_1", %{expires_at: "2027-01-01T00:00:00Z"})
@@ -179,7 +175,7 @@ defmodule Auth0Client.Management.ClientTest do
     end
 
     test "delete_credential/2 removes one" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Client.delete_credential("abc123", "cred_1")
 
@@ -219,9 +215,7 @@ defmodule Auth0Client.Management.ClientTest do
 
     # Upsert: 201 when Auth0 creates the application, 200 when it updates one.
     test "register_metadata_document/1 accepts a 201 for a new client" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"client_id" => "new"})
-      end)
+      stub_json(201, %{"client_id" => "new"})
 
       assert {:ok, %{"client_id" => "new"}} =
                Client.register_metadata_document(%{external_client_id: "https://app/metadata"})

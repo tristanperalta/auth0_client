@@ -9,8 +9,6 @@ defmodule Auth0Client.Management.RoleTest do
     "permission_name" => "read:users"
   }
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "all/1" do
     test "gets all roles" do
       stub_request([%{"id" => "rol_1", "name" => "admin"}])
@@ -84,7 +82,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "delete/1" do
     test "deletes the role and returns :ok on Auth0's empty 200" do
-      stub_request(empty(200))
+      stub_status(200)
 
       assert :ok = Role.delete("rol_1")
 
@@ -115,7 +113,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "add_permissions/2" do
     test "posts permissions given as tuples" do
-      stub_request(empty(201))
+      stub_status(201)
 
       assert :ok = Role.add_permissions("rol_1", [{"https://api.example.com", "read:users"}])
 
@@ -126,11 +124,11 @@ defmodule Auth0Client.Management.RoleTest do
     end
 
     test "the tuple shorthand and the map form send identical bodies" do
-      stub_request(empty(201))
+      stub_status(201)
       Role.add_permissions("rol_1", [{"https://api.example.com", "read:users"}])
       from_tuple = assert_receive_request().body
 
-      stub_request(empty(201))
+      stub_status(201)
 
       Role.add_permissions("rol_1", [
         %{resource_server_identifier: "https://api.example.com", permission_name: "read:users"}
@@ -140,7 +138,7 @@ defmodule Auth0Client.Management.RoleTest do
     end
 
     test "a string-keyed map read back from Auth0 round-trips" do
-      stub_request(empty(201))
+      stub_status(201)
 
       assert :ok = Role.add_permissions("rol_1", [@permission])
 
@@ -148,7 +146,7 @@ defmodule Auth0Client.Management.RoleTest do
     end
 
     test "sends several permissions in one call" do
-      stub_request(empty(201))
+      stub_status(201)
 
       Role.add_permissions("rol_1", [
         {"https://api.example.com", "read:users"},
@@ -161,7 +159,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "remove_permissions/2" do
     test "sends the permissions in the body of a DELETE" do
-      stub_request(empty(200))
+      stub_status(200)
 
       assert :ok = Role.remove_permissions("rol_1", [{"https://api.example.com", "read:users"}])
 
@@ -193,7 +191,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "add_users/2" do
     test "posts the user ids and returns :ok on Auth0's empty 200" do
-      stub_request(empty(200))
+      stub_status(200)
 
       assert :ok = Role.add_users("rol_1", ["auth0|1", "auth0|2"])
 
@@ -218,7 +216,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "add_groups/2" do
     test "posts the group ids" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Role.add_groups("rol_1", ["grp_1"])
 
@@ -231,7 +229,7 @@ defmodule Auth0Client.Management.RoleTest do
 
   describe "remove_groups/2" do
     test "sends the group ids in the body of a DELETE" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Role.remove_groups("rol_1", ["grp_1"])
 

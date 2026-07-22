@@ -4,8 +4,6 @@ defmodule Auth0Client.Management.GuardianTest do
 
   alias Auth0Client.Management.Guardian
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "enrollments" do
     test "create_enrollment_ticket/1 posts the ticket request" do
       stub_request(%{"ticket_url" => "https://tenant.auth0.com/guardian/enroll?ticket=abc"})
@@ -30,7 +28,7 @@ defmodule Auth0Client.Management.GuardianTest do
     end
 
     test "delete_enrollment/1 removes it" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Guardian.delete_enrollment("dev_1")
 

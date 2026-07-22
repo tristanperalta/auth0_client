@@ -160,14 +160,14 @@ defmodule Auth0Client.ApiTest do
     end
 
     test "do_delete sends a DELETE" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       assert :ok = MgmtEndpoint.delete_it("clients/1")
 
       assert assert_receive_request().method == "DELETE"
     end
 
     test "do_delete can carry query params" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       MgmtEndpoint.delete_it("user-blocks", %{identifier: "user@example.com"})
 
       request = assert_receive_request()
@@ -178,7 +178,7 @@ defmodule Auth0Client.ApiTest do
     # do_get/2 accepted a keyword list from the start; do_delete/2 did not, and
     # merging one into a map raises BadMapError rather than failing usefully.
     test "do_delete accepts a keyword list of params, like do_get" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       MgmtEndpoint.delete_it("user-blocks", identifier: "user@example.com")
 
       assert assert_receive_request().query == %{"identifier" => "user@example.com"}
@@ -234,7 +234,7 @@ defmodule Auth0Client.ApiTest do
     # do_get/3 and do_post/3 gained extra headers when userinfo needed them;
     # do_delete only caught up when /mfa/authenticators did.
     test "do_delete/3 merges extra headers" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       AuthEndpoint.delete_it("mfa/authenticators/totp|1", %{}, [{"Authorization", "Bearer USER"}])
 
       request = assert_receive_request()
@@ -243,7 +243,7 @@ defmodule Auth0Client.ApiTest do
     end
 
     test "do_delete/3 replaces rather than duplicates the authorization" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       MgmtEndpoint.delete_it("clients/1", %{}, [{"Authorization", "Bearer OVERRIDE"}])
 
       headers = assert_receive_request().headers
@@ -252,7 +252,7 @@ defmodule Auth0Client.ApiTest do
     end
 
     test "do_delete/3 still carries query params" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
       MgmtEndpoint.delete_it("clients/1", %{force: true}, [{"Authorization", "Bearer USER"}])
 
       assert assert_receive_request().query == %{"force" => "true"}
@@ -260,7 +260,7 @@ defmodule Auth0Client.ApiTest do
   end
 
   describe "do_post_multipart/2" do
-    defp content_type(request) do
+    defp content_type_header(request) do
       request.headers |> List.keyfind("content-type", 0) |> elem(1)
     end
 
@@ -270,7 +270,7 @@ defmodule Auth0Client.ApiTest do
       stub_request(%{})
       AuthEndpoint.post_multipart_it("upload", file: {"contents", filename: "a.json"})
 
-      type = content_type(assert_receive_request())
+      type = content_type_header(assert_receive_request())
       assert type =~ "multipart/form-data"
       assert type =~ "boundary="
       refute type =~ "application/json"

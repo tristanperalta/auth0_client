@@ -60,9 +60,7 @@ defmodule Auth0Client.TokenStateTest do
     end
 
     test "returns an error when Auth0 rejects the credentials" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(401) |> Req.Test.json(%{"error" => "access_denied"})
-      end)
+      stub_json(401, %{"error" => "access_denied"})
 
       assert {:error, %{reason: :token_fetch_failed, status: 401}} = TokenState.fetch()
     end
@@ -86,7 +84,7 @@ defmodule Auth0Client.TokenStateTest do
     end
 
     test "a failed fetch is not cached, so the next call tries again" do
-      stub_request(fn conn -> Plug.Conn.put_status(conn, 500) |> Req.Test.json(%{}) end)
+      stub_json(500)
       assert {:error, _} = TokenState.fetch()
       assert_receive_request()
 
@@ -142,7 +140,7 @@ defmodule Auth0Client.TokenStateTest do
     end
 
     test "the process still serves requests after a failed fetch" do
-      stub_request(fn conn -> Plug.Conn.put_status(conn, 500) |> Req.Test.json(%{}) end)
+      stub_json(500)
       assert {:error, _} = TokenState.fetch()
       assert_receive_request()
 

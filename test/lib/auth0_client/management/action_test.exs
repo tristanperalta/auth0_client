@@ -6,9 +6,6 @@ defmodule Auth0Client.Management.ActionTest do
 
   @action_id "act_abc123"
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-  defp accepted(body), do: fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(body) end
-
   describe "all/1" do
     test "gets all actions" do
       stub_request(%{"actions" => [%{"id" => @action_id}]})
@@ -107,7 +104,7 @@ defmodule Auth0Client.Management.ActionTest do
 
   describe "delete/1,2" do
     test "deletes the action" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Action.delete(@action_id)
 
@@ -118,7 +115,7 @@ defmodule Auth0Client.Management.ActionTest do
     end
 
     test "passes force, which Auth0 needs to delete a bound action" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Action.delete(@action_id, force: true)
 
@@ -128,7 +125,7 @@ defmodule Auth0Client.Management.ActionTest do
 
   describe "deploy/1" do
     test "posts to the deploy path and returns the accepted version" do
-      stub_request(accepted(%{"id" => "ver_1", "deployed" => true}))
+      stub_json(202, %{"id" => "ver_1", "deployed" => true})
 
       assert {:ok, %{"id" => "ver_1"}} = Action.deploy(@action_id)
 
@@ -179,7 +176,7 @@ defmodule Auth0Client.Management.ActionTest do
     end
 
     test "deploy_version/3 rolls back to an earlier version" do
-      stub_request(accepted(%{"id" => "ver_1"}))
+      stub_json(202, %{"id" => "ver_1"})
 
       assert {:ok, %{"id" => "ver_1"}} = Action.deploy_version(@action_id, "ver_1")
 
@@ -191,7 +188,7 @@ defmodule Auth0Client.Management.ActionTest do
     end
 
     test "deploy_version/3 can overwrite the draft" do
-      stub_request(accepted(%{"id" => "ver_1"}))
+      stub_json(202, %{"id" => "ver_1"})
 
       Action.deploy_version(@action_id, "ver_1", %{update_draft: true})
 

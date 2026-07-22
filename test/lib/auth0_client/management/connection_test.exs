@@ -100,7 +100,7 @@ defmodule Auth0Client.Management.ConnectionTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Connection.delete("con_123")
 
@@ -113,7 +113,7 @@ defmodule Auth0Client.Management.ConnectionTest do
 
   describe "delete_conn_user/2" do
     test "deletes the user by email" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Connection.delete_conn_user("con_123", "samar@example.com")
 
@@ -148,7 +148,7 @@ defmodule Auth0Client.Management.ConnectionTest do
     # The body is a JSON array, not an object. do_patch reads a *keyword* list as an
     # object, so a list of maps has to survive untouched — it used to raise.
     test "sends an array of client statuses and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok =
                Connection.update_clients("con_123", [
@@ -179,11 +179,7 @@ defmodule Auth0Client.Management.ConnectionTest do
     end
 
     test "create_keys/2 posts and accepts a 201" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(201, ~s({"kid":"abc"}))
-      end)
+      stub_json(201, %{"kid" => "abc"})
 
       assert {:ok, %{"kid" => "abc"}} = Connection.create_keys("con_123", %{signing_alg: "RS256"})
 
@@ -194,11 +190,7 @@ defmodule Auth0Client.Management.ConnectionTest do
     end
 
     test "rotate_keys/2 posts to the rotate path" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(201, ~s({"kid":"def"}))
-      end)
+      stub_json(201, %{"kid" => "def"})
 
       assert {:ok, %{"kid" => "def"}} = Connection.rotate_keys("con_123")
 
@@ -222,11 +214,7 @@ defmodule Auth0Client.Management.ConnectionTest do
     # Auth0 reports "offline" as a 404, so it arrives as an error like any other 404.
     # Documented on the function rather than translated into a boolean.
     test "an offline connection surfaces as a 404 error" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(404, ~s({"error":"Not Found"}))
-      end)
+      stub_json(404, %{"error" => "Not Found"})
 
       assert {:error, %Auth0Client.Error{status: 404}} = Connection.status("con_123")
     end

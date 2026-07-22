@@ -6,8 +6,6 @@ defmodule Auth0Client.Management.CustomDomainTest do
 
   @id "cd_abc123"
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "all/1" do
     test "gets all custom domains" do
       stub_request([%{"custom_domain_id" => @id, "domain" => "auth.example.com"}])
@@ -81,7 +79,7 @@ defmodule Auth0Client.Management.CustomDomainTest do
 
   describe "delete/1" do
     test "deletes the domain" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = CustomDomain.delete(@id)
 

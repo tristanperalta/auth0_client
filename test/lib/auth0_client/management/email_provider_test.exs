@@ -81,7 +81,7 @@ defmodule Auth0Client.Management.EmailProviderTest do
 
   describe "delete/0" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = EmailProvider.delete()
 

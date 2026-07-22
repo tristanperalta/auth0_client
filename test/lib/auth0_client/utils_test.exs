@@ -181,9 +181,7 @@ defmodule Auth0Client.UtilsTest do
       Application.put_env(:auth0_client, :mgmt_client_id, "a_client_id")
       Application.put_env(:auth0_client, :mgmt_client_secret, "a_client_secret")
 
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(429) |> Req.Test.json(%{"error" => "too_many_requests"})
-      end)
+      stub_json(429, %{"error" => "too_many_requests"})
 
       assert {:error, %{reason: :token_fetch_failed, status: 429}} = Utils.request_headers(:mgmt)
     end

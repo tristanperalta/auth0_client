@@ -40,11 +40,7 @@ defmodule Auth0Client.Management.Connection.DirectoryProvisioningTest do
 
   describe "create/2" do
     test "posts the configuration and accepts a 201" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.send_resp(201, ~s({"connection_id":"con_123"}))
-      end)
+      stub_json(201, %{"connection_id" => "con_123"})
 
       assert {:ok, %{"connection_id" => "con_123"}} =
                DirectoryProvisioning.create("con_123", %{
@@ -81,7 +77,7 @@ defmodule Auth0Client.Management.Connection.DirectoryProvisioningTest do
 
   describe "delete/1" do
     test "deletes and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = DirectoryProvisioning.delete("con_123")
 
@@ -105,7 +101,7 @@ defmodule Auth0Client.Management.Connection.DirectoryProvisioningTest do
 
   describe "synchronize/1" do
     test "posts to the synchronizations path and accepts a 201" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 201, "") end)
+      stub_status(201)
 
       assert :ok = DirectoryProvisioning.synchronize("con_123")
 
@@ -134,7 +130,7 @@ defmodule Auth0Client.Management.Connection.DirectoryProvisioningTest do
     end
 
     test "replace_synchronized_groups/2 puts and returns :ok on 204" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok =
                DirectoryProvisioning.replace_synchronized_groups("con_123", %{

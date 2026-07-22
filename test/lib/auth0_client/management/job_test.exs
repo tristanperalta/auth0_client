@@ -6,7 +6,7 @@ defmodule Auth0Client.Management.JobTest do
 
   @job_id "job_abc123"
 
-  defp content_type(request) do
+  defp content_type_header(request) do
     request.headers |> List.keyfind("content-type", 0) |> elem(1)
   end
 
@@ -57,7 +57,7 @@ defmodule Auth0Client.Management.JobTest do
     # Auth0 answers 204 when the import was clean, so success is a bare :ok here
     # rather than {:ok, []} — the surprising branch, and the common one.
     test "returns :ok when the job had no errors at all" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 204, "") end)
+      stub_status(204)
 
       assert :ok = Job.errors(@job_id)
     end
@@ -74,7 +74,7 @@ defmodule Auth0Client.Management.JobTest do
       assert request.method == "POST"
       assert request.path == "/api/v2/jobs/users-exports"
       assert request.body == %{"connection_id" => "con_1", "format" => "json"}
-      assert content_type(request) == "application/json"
+      assert request.content_type == "application/json"
     end
 
     test "defaults to an empty body" do
@@ -88,9 +88,7 @@ defmodule Auth0Client.Management.JobTest do
 
   describe "users_imports/3" do
     test "posts as multipart, not JSON" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{"id" => @job_id})
-      end)
+      stub_json(202, %{"id" => @job_id})
 
       assert {:ok, %{"id" => @job_id}} =
                Job.users_imports(~s([{"email":"a@b.com"}]), "con_1")
@@ -102,13 +100,13 @@ defmodule Auth0Client.Management.JobTest do
       # The whole point of dropping the default header: Req sets this one with
       # put_new_header, so an application/json left in place would win and the
       # boundary would never be sent.
-      assert content_type(request) =~ "multipart/form-data"
-      assert content_type(request) =~ "boundary="
-      refute content_type(request) =~ "application/json"
+      assert content_type_header(request) =~ "multipart/form-data"
+      assert content_type_header(request) =~ "boundary="
+      refute content_type_header(request) =~ "application/json"
     end
 
     test "carries the file contents and connection id" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       Job.users_imports(~s([{"email":"a@b.com"}]), "con_1")
 
@@ -123,7 +121,7 @@ defmodule Auth0Client.Management.JobTest do
     # Req has no clause for a boolean field value and raises rather than failing
     # usefully, so booleans are coerced before they reach it.
     test "stringifies boolean options" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} =
                Job.users_imports(~s([]), "con_1", %{upsert: true, send_completion_email: false})
@@ -135,7 +133,7 @@ defmodule Auth0Client.Management.JobTest do
     end
 
     test "passes through string and integer options untouched" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = Job.users_imports(~s([]), "con_1", %{external_id: "ext-42"})
 
@@ -152,7 +150,7 @@ defmodule Auth0Client.Management.JobTest do
       File.write!(path, ~s([{"email":"streamed@example.com"}]))
       on_exit(fn -> File.rm(path) end)
 
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       assert {:ok, _} = Job.users_imports(File.stream!(path), "con_1")
 
@@ -172,7 +170,7 @@ defmodule Auth0Client.Management.JobTest do
     end
 
     test "a multipart request still carries the management token" do
-      stub_request(fn conn -> conn |> Plug.Conn.put_status(202) |> Req.Test.json(%{}) end)
+      stub_json(202)
 
       Job.users_imports(~s([]), "con_1")
 

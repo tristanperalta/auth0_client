@@ -65,7 +65,7 @@ defmodule Auth0Client.Management.RefreshTokenTest do
 
   describe "delete/1 and revoke/1" do
     test "delete/1 addresses one token by id and accepts a 202" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 202, "") end)
+      stub_status(202)
 
       assert :ok = RefreshToken.delete("rt_1")
 
@@ -75,7 +75,7 @@ defmodule Auth0Client.Management.RefreshTokenTest do
     end
 
     test "revoke/1 posts a bulk body to its own path and accepts a 202" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 202, "") end)
+      stub_status(202)
 
       assert :ok = RefreshToken.revoke(%{ids: ["rt_1", "rt_2"]})
 
@@ -86,7 +86,7 @@ defmodule Auth0Client.Management.RefreshTokenTest do
     end
 
     test "revoke/1 accepts the user and client combination" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 202, "") end)
+      stub_status(202)
 
       assert :ok = RefreshToken.revoke(%{user_id: "auth0|23423", client_id: "abc123"})
 

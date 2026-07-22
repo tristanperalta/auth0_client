@@ -6,8 +6,6 @@ defmodule Auth0Client.Management.KeyTest do
 
   @kid "abc123"
 
-  defp empty(status), do: fn conn -> Plug.Conn.send_resp(conn, status, "") end
-
   describe "application signing keys" do
     test "signing_keys/0 lists them" do
       stub_request([%{"kid" => @kid, "current" => true}])
@@ -112,7 +110,7 @@ defmodule Auth0Client.Management.KeyTest do
     end
 
     test "delete_encryption_key/1 deletes by kid" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Key.delete_encryption_key(@kid)
 
@@ -122,7 +120,7 @@ defmodule Auth0Client.Management.KeyTest do
     end
 
     test "rekey/0 posts to the rekey path" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Key.rekey()
 
@@ -168,7 +166,7 @@ defmodule Auth0Client.Management.KeyTest do
     end
 
     test "delete_custom_signing_keys/0 removes them" do
-      stub_request(empty(204))
+      stub_status(204)
 
       assert :ok = Key.delete_custom_signing_keys()
 

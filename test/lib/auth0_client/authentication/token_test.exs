@@ -290,14 +290,10 @@ defmodule Auth0Client.Authentication.TokenTest do
     # a failure. It arrives as an error like any other, so a caller has to read the
     # code out of the body rather than bailing on the first {:error, _}.
     test "authorization_pending arrives as an error carrying a readable code" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_status(403)
-        |> Req.Test.json(%{
-          "error" => "authorization_pending",
-          "error_description" => "User has yet to authorize device code."
-        })
-      end)
+      stub_json(403, %{
+        "error" => "authorization_pending",
+        "error_description" => "User has yet to authorize device code."
+      })
 
       assert {:error, %Auth0Client.Error{status: 403, body: body}} =
                Token.device("an_id", "a_device_code")
@@ -366,7 +362,7 @@ defmodule Auth0Client.Authentication.TokenTest do
 
   describe "revoke/2,3" do
     test "posts to the revoke endpoint and normalises the empty 200 body to :ok" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+      stub_status(200)
 
       assert :ok = Token.revoke("an_id", "a_refresh_token")
 
@@ -377,7 +373,7 @@ defmodule Auth0Client.Authentication.TokenTest do
     end
 
     test "posts a client_secret given in opts" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+      stub_status(200)
 
       assert :ok = Token.revoke("an_id", "a_refresh_token", %{client_secret: "a_secret"})
 
@@ -385,9 +381,7 @@ defmodule Auth0Client.Authentication.TokenTest do
     end
 
     test "surfaces a rejection as an error" do
-      stub_request(fn conn ->
-        conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"error" => "invalid_request"})
-      end)
+      stub_json(400, %{"error" => "invalid_request"})
 
       assert {:error, %Auth0Client.Error{reason: :bad_request, status: 400}} =
                Token.revoke("an_id", "a_refresh_token")
@@ -520,11 +514,7 @@ defmodule Auth0Client.Authentication.TokenTest do
   # The individual calls above are each correct; this is the order they go in.
   describe "the MFA login flow end to end" do
     test "password grant reports mfa_required, then challenge, then verify" do
-      stub_request(fn conn ->
-        conn
-        |> Plug.Conn.put_status(403)
-        |> Req.Test.json(%{"error" => "mfa_required", "mfa_token" => "mfa_tok"})
-      end)
+      stub_json(403, %{"error" => "mfa_required", "mfa_token" => "mfa_tok"})
 
       assert {:error, %Auth0Client.Error{status: 403, body: body}} =
                Token.password("an_id", "user@example.com", "pwd")
@@ -572,7 +562,7 @@ defmodule Auth0Client.Authentication.TokenTest do
     end
 
     test "revoke is form-encoded too" do
-      stub_request(fn conn -> Plug.Conn.send_resp(conn, 200, "") end)
+      stub_status(200)
       Token.revoke("an_id", "a_refresh_token")
 
       assert assert_receive_request().content_type == "application/x-www-form-urlencoded"
