@@ -105,7 +105,7 @@ defmodule Auth0Client.Management.User do
 
       iex> Auth0Client.Management.User.enrollments("auth0|234")
   """
-  def enrollments(user_id), do: do_get("#{@path}/#{user_id}/enrollments", %{})
+  def enrollments(user_id), do: do_get("#{@path}/#{user_id}/enrollments")
 
   @doc """
   Deletes a user's multifactor provider
@@ -295,7 +295,7 @@ defmodule Auth0Client.Management.User do
   """
   def authentication_method(user_id, method_id)
       when is_binary(user_id) and is_binary(method_id) do
-    do_get("#{@path}/#{user_id}/authentication-methods/#{method_id}", %{})
+    do_get("#{@path}/#{user_id}/authentication-methods/#{method_id}")
   end
 
   @doc """

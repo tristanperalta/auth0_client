@@ -21,7 +21,7 @@ defmodule Auth0Client.Management.Job do
 
       iex> Auth0Client.Management.Job.get("job_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}")
 
   @doc """
   Gets the errors from a completed import job.
@@ -34,7 +34,7 @@ defmodule Auth0Client.Management.Job do
         {:ok, errors} -> handle(errors)
       end
   """
-  def errors(id) when is_binary(id), do: do_get("#{@path}/#{id}/errors", %{})
+  def errors(id) when is_binary(id), do: do_get("#{@path}/#{id}/errors")
 
   @doc """
   Sends a verification email for the given user. `user_id` is required.

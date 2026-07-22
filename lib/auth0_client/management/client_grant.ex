@@ -20,7 +20,7 @@ defmodule Auth0Client.Management.ClientGrant do
 
       iex> Auth0Client.Management.ClientGrant.get("cgr_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}")
 
   @doc """
   Lists the organizations a client grant is associated with.

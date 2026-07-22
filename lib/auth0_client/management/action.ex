@@ -42,7 +42,7 @@ defmodule Auth0Client.Management.Action do
 
       iex> Auth0Client.Management.Action.get("act_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@actions}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@actions}/#{id}")
 
   @doc """
   Creates an action.
@@ -118,7 +118,7 @@ defmodule Auth0Client.Management.Action do
       iex> Auth0Client.Management.Action.version("act_abc123", "ver_1")
   """
   def version(action_id, version_id) when is_binary(action_id) and is_binary(version_id) do
-    do_get("#{@actions}/#{action_id}/versions/#{version_id}", %{})
+    do_get("#{@actions}/#{action_id}/versions/#{version_id}")
   end
 
   @doc """
@@ -140,7 +140,7 @@ defmodule Auth0Client.Management.Action do
 
       iex> Auth0Client.Management.Action.execution("exec_abc123")
   """
-  def execution(id) when is_binary(id), do: do_get("#{@path}/executions/#{id}", %{})
+  def execution(id) when is_binary(id), do: do_get("#{@path}/executions/#{id}")
 
   @doc """
   Gets the available triggers and their current versions.
@@ -149,7 +149,7 @@ defmodule Auth0Client.Management.Action do
 
       iex> Auth0Client.Management.Action.triggers()
   """
-  def triggers, do: do_get("#{@path}/triggers", %{})
+  def triggers, do: do_get("#{@path}/triggers")
 
   @doc """
   Gets the actions currently bound to a trigger, in execution order

@@ -25,6 +25,6 @@ defmodule Auth0Client.Management.Log do
   Get a log event by id
   """
   def get(id) do
-    do_get("#{@path}/#{id}", %{})
+    do_get("#{@path}/#{id}")
   end
 end

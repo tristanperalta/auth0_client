@@ -30,7 +30,7 @@ defmodule Auth0Client.Management.Role do
 
       iex> Auth0Client.Management.Role.get("rol_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}")
 
   @doc """
   Creates a role. `name` is required; `description` is optional.

@@ -25,7 +25,7 @@ defmodule Auth0Client.Management.ResourceServer do
       iex> Auth0Client.Management.ResourceServer.get("resserver")
   """
   def get(id) do
-    do_get("#{@path}/#{id}", %{})
+    do_get("#{@path}/#{id}")
   end
 
   @doc """

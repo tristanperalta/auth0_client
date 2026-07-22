@@ -90,7 +90,7 @@ defmodule Auth0Client.Management.Client do
 
       iex> Auth0Client.Management.Client.credentials("some_client_id")
   """
-  def credentials(id) when is_binary(id), do: do_get("#{@path}/#{id}/credentials", %{})
+  def credentials(id) when is_binary(id), do: do_get("#{@path}/#{id}/credentials")
 
   @doc """
   Gets one client credential
@@ -98,7 +98,7 @@ defmodule Auth0Client.Management.Client do
       iex> Auth0Client.Management.Client.credential("some_client_id", "cred_abc123")
   """
   def credential(id, credential_id) when is_binary(id) and is_binary(credential_id) do
-    do_get("#{@path}/#{id}/credentials/#{credential_id}", %{})
+    do_get("#{@path}/#{id}/credentials/#{credential_id}")
   end
 
   @doc """

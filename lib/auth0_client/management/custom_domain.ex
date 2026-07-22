@@ -36,7 +36,7 @@ defmodule Auth0Client.Management.CustomDomain do
 
       iex> Auth0Client.Management.CustomDomain.get("cd_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}")
 
   @doc """
   Registers a custom domain.
@@ -95,7 +95,7 @@ defmodule Auth0Client.Management.CustomDomain do
 
       iex> Auth0Client.Management.CustomDomain.default()
   """
-  def default, do: do_get("#{@path}/default", %{})
+  def default, do: do_get("#{@path}/default")
 
   @doc """
   Promotes a verified custom domain to be the tenant's default.

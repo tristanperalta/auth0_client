@@ -102,7 +102,7 @@ defmodule Auth0Client.Authentication do
 
       iex> Auth0Client.Authentication.jwks()
   """
-  def jwks, do: do_get(".well-known/jwks.json", %{})
+  def jwks, do: do_get(".well-known/jwks.json")
 
   @doc """
   Fetches the tenant's OpenID Connect discovery document.
@@ -111,7 +111,7 @@ defmodule Auth0Client.Authentication do
 
       iex> Auth0Client.Authentication.openid_configuration()
   """
-  def openid_configuration, do: do_get(".well-known/openid-configuration", %{})
+  def openid_configuration, do: do_get(".well-known/openid-configuration")
 
   @doc """
   Starts the Device Authorization Flow, for a device with no browser.

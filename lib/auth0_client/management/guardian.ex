@@ -46,7 +46,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.enrollment("dev_abc123")
   """
-  def enrollment(id) when is_binary(id), do: do_get("#{@path}/enrollments/#{id}", %{})
+  def enrollment(id) when is_binary(id), do: do_get("#{@path}/enrollments/#{id}")
 
   @doc """
   Deletes an enrollment, so the user must enrol again
@@ -60,7 +60,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.factors()
   """
-  def factors, do: do_get(@factors, %{})
+  def factors, do: do_get(@factors)
 
   @doc """
   Enables or disables a factor for the whole tenant.
@@ -79,7 +79,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.policies()
   """
-  def policies, do: do_get("#{@path}/policies", %{})
+  def policies, do: do_get("#{@path}/policies")
 
   @doc """
   Sets the tenant's MFA policies.
@@ -100,7 +100,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.phone_message_types()
   """
-  def phone_message_types, do: do_get("#{@factors}/phone/message-types", %{})
+  def phone_message_types, do: do_get("#{@factors}/phone/message-types")
 
   @doc """
   Sets the message types for the phone factor — `sms`, `voice`, or both
@@ -116,7 +116,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.phone_twilio()
   """
-  def phone_twilio, do: do_get("#{@factors}/phone/providers/twilio", %{})
+  def phone_twilio, do: do_get("#{@factors}/phone/providers/twilio")
 
   @doc """
   Sets the Twilio configuration for the phone factor
@@ -132,7 +132,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.phone_provider()
   """
-  def phone_provider, do: do_get("#{@factors}/phone/selected-provider", %{})
+  def phone_provider, do: do_get("#{@factors}/phone/selected-provider")
 
   @doc """
   Chooses which provider delivers the phone factor — `auth0`, `twilio` or
@@ -149,7 +149,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.phone_templates()
   """
-  def phone_templates, do: do_get("#{@factors}/phone/templates", %{})
+  def phone_templates, do: do_get("#{@factors}/phone/templates")
 
   @doc """
   Customises the enrollment and verification messages for the phone factor
@@ -165,7 +165,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.push_provider()
   """
-  def push_provider, do: do_get("#{@factors}/push-notification/selected-provider", %{})
+  def push_provider, do: do_get("#{@factors}/push-notification/selected-provider")
 
   @doc """
   Chooses which provider delivers push notifications — `guardian`, `sns` or `direct`
@@ -181,7 +181,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.apns()
   """
-  def apns, do: do_get("#{@push}/apns", %{})
+  def apns, do: do_get("#{@push}/apns")
 
   @doc """
   Merges into the APNs push configuration
@@ -202,7 +202,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.sns()
   """
-  def sns, do: do_get("#{@push}/sns", %{})
+  def sns, do: do_get("#{@push}/sns")
 
   @doc """
   Merges into the Amazon SNS push configuration
@@ -254,7 +254,7 @@ defmodule Auth0Client.Management.Guardian do
 
       iex> Auth0Client.Management.Guardian.duo_settings()
   """
-  def duo_settings, do: do_get("#{@factors}/duo/settings", %{})
+  def duo_settings, do: do_get("#{@factors}/duo/settings")
 
   @doc """
   Merges into the Duo configuration

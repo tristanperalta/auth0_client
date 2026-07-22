@@ -36,7 +36,7 @@ defmodule Auth0Client.Management.Organization do
 
       iex> Auth0Client.Management.Organization.get("org_abc123")
   """
-  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}", %{})
+  def get(id) when is_binary(id), do: do_get("#{@path}/#{id}")
 
   @doc """
   Gets a single organization by name.
@@ -45,7 +45,7 @@ defmodule Auth0Client.Management.Organization do
 
       iex> Auth0Client.Management.Organization.get_by_name("acme-corp")
   """
-  def get_by_name(name) when is_binary(name), do: do_get("#{@path}/name/#{name}", %{})
+  def get_by_name(name) when is_binary(name), do: do_get("#{@path}/name/#{name}")
 
   @doc """
   Creates an organization. `name` is required, and must be lowercase with no spaces.
@@ -229,7 +229,7 @@ defmodule Auth0Client.Management.Organization do
       iex> Auth0Client.Management.Organization.connection("org_abc123", "con_1")
   """
   def connection(id, connection_id) when is_binary(id) and is_binary(connection_id) do
-    do_get("#{@path}/#{id}/connections/#{connection_id}", %{})
+    do_get("#{@path}/#{id}/connections/#{connection_id}")
   end
 
   @doc """
@@ -308,7 +308,7 @@ defmodule Auth0Client.Management.Organization do
   """
   def discovery_domain(id, discovery_domain_id)
       when is_binary(id) and is_binary(discovery_domain_id) do
-    do_get("#{@path}/#{id}/discovery-domains/#{discovery_domain_id}", %{})
+    do_get("#{@path}/#{id}/discovery-domains/#{discovery_domain_id}")
   end
 
   @doc """
@@ -317,7 +317,7 @@ defmodule Auth0Client.Management.Organization do
       iex> Auth0Client.Management.Organization.discovery_domain_by_name("org_abc123", "acme.com")
   """
   def discovery_domain_by_name(id, domain) when is_binary(id) and is_binary(domain) do
-    do_get("#{@path}/#{id}/discovery-domains/name/#{domain}", %{})
+    do_get("#{@path}/#{id}/discovery-domains/name/#{domain}")
   end
 
   @doc """

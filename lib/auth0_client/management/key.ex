@@ -25,14 +25,14 @@ defmodule Auth0Client.Management.Key do
 
       iex> Auth0Client.Management.Key.signing_keys()
   """
-  def signing_keys, do: do_get("#{@path}/signing", %{})
+  def signing_keys, do: do_get("#{@path}/signing")
 
   @doc """
   Gets one application signing key by its key id
 
       iex> Auth0Client.Management.Key.signing_key("abc123")
   """
-  def signing_key(kid) when is_binary(kid), do: do_get("#{@path}/signing/#{kid}", %{})
+  def signing_key(kid) when is_binary(kid), do: do_get("#{@path}/signing/#{kid}")
 
   @doc """
   Rotates the application signing key.
@@ -76,7 +76,7 @@ defmodule Auth0Client.Management.Key do
 
       iex> Auth0Client.Management.Key.encryption_key("abc123")
   """
-  def encryption_key(kid) when is_binary(kid), do: do_get("#{@path}/encryption/#{kid}", %{})
+  def encryption_key(kid) when is_binary(kid), do: do_get("#{@path}/encryption/#{kid}")
 
   @doc """
   Creates an encryption key.
@@ -132,7 +132,7 @@ defmodule Auth0Client.Management.Key do
 
       iex> Auth0Client.Management.Key.custom_signing_keys()
   """
-  def custom_signing_keys, do: do_get("#{@path}/custom-signing", %{})
+  def custom_signing_keys, do: do_get("#{@path}/custom-signing")
 
   @doc """
   Replaces the custom signing keys.
