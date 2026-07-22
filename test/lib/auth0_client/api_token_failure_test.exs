@@ -9,6 +9,8 @@ defmodule Auth0Client.ApiTokenFailureTest do
   use ExUnit.Case, async: false
   use Auth0Client.ReqCase
 
+  import Auth0Client.EnvCase
+
   defmodule MgmtEndpoint do
     @moduledoc false
     use Auth0Client.Api, for: :mgmt
@@ -17,19 +19,13 @@ defmodule Auth0Client.ApiTokenFailureTest do
   end
 
   setup do
-    original = Application.get_env(:auth0_client, :mgmt_token)
+    on_exit(&Auth0Client.TokenState.invalidate/0)
+    restore_env_on_exit([:mgmt_token, :mgmt_client_id, :mgmt_client_secret])
 
     Application.delete_env(:auth0_client, :mgmt_token)
     Application.put_env(:auth0_client, :mgmt_client_id, "a_client_id")
     Application.put_env(:auth0_client, :mgmt_client_secret, "a_client_secret")
     Auth0Client.TokenState.invalidate()
-
-    on_exit(fn ->
-      Application.put_env(:auth0_client, :mgmt_token, original)
-      Application.delete_env(:auth0_client, :mgmt_client_id)
-      Application.delete_env(:auth0_client, :mgmt_client_secret)
-      Auth0Client.TokenState.invalidate()
-    end)
 
     :ok
   end
