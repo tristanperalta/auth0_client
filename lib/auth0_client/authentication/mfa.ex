@@ -90,6 +90,4 @@ defmodule Auth0Client.Authentication.Mfa do
       when is_binary(token) and is_binary(authenticator_id) do
     do_delete("#{@path}/authenticators/#{authenticator_id}", %{}, bearer(token))
   end
-
-  defp bearer(token), do: [{"Authorization", "Bearer #{token}"}]
 end

@@ -71,7 +71,7 @@ defmodule Auth0Client.Authentication do
       iex> Auth0Client.Authentication.userinfo("sample.access_token.here")
   """
   def userinfo(access_token) do
-    do_get("userinfo", %{}, [{"Authorization", "Bearer #{access_token}"}])
+    do_get("userinfo", %{}, bearer(access_token))
   end
 
   @doc """
@@ -219,7 +219,7 @@ defmodule Auth0Client.Authentication do
     do_post(
       "oauth/global-token-revocation/connection/#{connection_name}",
       %{subject: subject},
-      [{"Authorization", "Bearer #{access_token}"}]
+      bearer(access_token)
     )
   end
 end

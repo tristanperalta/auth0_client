@@ -28,6 +28,15 @@ defmodule Auth0Client.Utils do
   def base_headers, do: [{"User-Agent", ua()}, {"Content-Type", "application/json"}]
 
   @doc """
+  The `Authorization` header list for a bearer token.
+
+  Used both for the management token and for the tokens a caller supplies to the
+  Authentication API — `userinfo/1`, the `/mfa/*` endpoints, global token
+  revocation.
+  """
+  def bearer(token), do: [{"Authorization", "Bearer #{token}"}]
+
+  @doc """
   Builds the headers for a request, merging in any per-request `extra` headers.
 
   Management requests carry a bearer token, so this returns `{:error, reason}` if
@@ -38,7 +47,7 @@ defmodule Auth0Client.Utils do
 
   def request_headers(:mgmt, extra) do
     with {:ok, token} <- mgmt_token() do
-      {:ok, merge_headers([{"Authorization", "Bearer #{token}"} | base_headers()], extra)}
+      {:ok, merge_headers(bearer(token) ++ base_headers(), extra)}
     end
   end
 
