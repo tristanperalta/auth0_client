@@ -78,57 +78,61 @@ excluded.
 
 ## Comparison with other Auth0 libraries
 
-Compared against every Auth0 package on hex, as of July 2026. This library moves; treat its column as a snapshot and check [ROADMAP.md](ROADMAP.md) for current coverage. `auth0_ex` is the upstream this was forked from.
+Two other hex packages do the same job — calling Auth0's APIs from your server. Compared as of July 2026;
+this library moves, so treat its column as a snapshot and check [ROADMAP.md](ROADMAP.md) for current
+coverage. `auth0_ex` is the upstream this was forked from.
 
 ### Auth0 features
 
-| | **this library** | [auth0_api](https://hex.pm/packages/auth0_api) | [auth0_ex](https://hex.pm/packages/auth0_ex) | [prima_auth0_ex](https://hex.pm/packages/prima_auth0_ex) | [auth0_jwks](https://hex.pm/packages/auth0_jwks) | [auth0_plug](https://hex.pm/packages/auth0_plug) | [ueberauth_auth0](https://hex.pm/packages/ueberauth_auth0) |
-|---|---|---|---|---|---|---|---|
-| **Users** — CRUD, search, blocks | ✅ | ✅ | ✅ | — | — | — | — |
-| **Tickets** — password change, email verification | ✅ | ✅ | ✅ | — | — | — | — |
-| **Roles and permissions** (RBAC) | ✅ | ✅ | — | — | — | — | — |
-| **Organizations** (B2B), groups | ✅ | ✅ | — | — | — | — | — |
-| **Clients and grants** | ✅ | ✅ | ✅ | — | — | — | — |
-| **Connections** | ✅ | ✅ | ✅ | — | — | — | — |
-| **Actions** | ✅ | ✅ | — | — | — | — | — |
-| **MFA** (Guardian) | ✅ | ✅ | — | — | — | — | — |
-| **Custom domains, signing keys** | ✅ | ✅ | — | — | — | — | — |
-| **Jobs** — bulk import/export | ✅ | ✅ | ✅ | — | — | — | — |
-| **Logs, log streams** | ✅ | ✅ | ✅ | — | — | — | — |
-| **Branding, prompts, email templates** | — | ✅ | — | — | — | — | — |
-| **Attack protection, anomaly** | — | ✅ | — | — | — | — | — |
-| **Sessions, refresh tokens** | ✅ | ✅ | — | — | — | — | — |
-| **Login flows** — auth code, PKCE, passwordless | ✅ | — | ✅ | — | — | — | ✅ |
-| **Machine-to-machine tokens** | ✅ | ✅ | ✅ | ✅ | — | — | — |
-| **Browser login as an Ueberauth strategy** | — | — | — | — | — | — | ✅ |
-| **Inbound JWT verification** (RS256 + JWKS) | — | — | — | ✅ | ✅ | — | — |
-| **Plug integration** for request auth | — | — | — | ✅ | ✅ | ✅ ¹ | — |
-| **Key rotation** handling | — | — | — | ✅ | ✅ | — | — |
-
-¹ `auth0_plug` verifies with a static symmetric secret (HS256) rather than fetching your tenant's JWKS. Auth0 signs with RS256 by default.
+| | **this library** | [auth0_api](https://hex.pm/packages/auth0_api) | [auth0_ex](https://hex.pm/packages/auth0_ex) |
+|---|---|---|---|
+| **Users** — CRUD, search, blocks | ✅ | ✅ | ✅ |
+| **Tickets** — password change, email verification | ✅ | ✅ | ✅ |
+| **Roles and permissions** (RBAC) | ✅ | ✅ | — |
+| **Organizations** (B2B), groups | ✅ | ✅ | — |
+| **Clients and grants** | ✅ | ✅ | ✅ |
+| **Connections** | ✅ | ✅ | ✅ |
+| **Actions** | ✅ | ✅ | — |
+| **MFA** (Guardian) | ✅ | ✅ | — |
+| **Custom domains, signing keys** | ✅ | ✅ | — |
+| **Jobs** — bulk import/export | ✅ | ✅ | ✅ |
+| **Logs, log streams** | ✅ | ✅ | ✅ |
+| **Branding, prompts, email templates** | — | ✅ | — |
+| **Attack protection, anomaly** | — | ✅ | — |
+| **Sessions, refresh tokens** | ✅ | ✅ | — |
+| **Login flows** — auth code, PKCE, passwordless | ✅ | — | ✅ |
+| **Machine-to-machine tokens** | ✅ | ✅ | ✅ |
 
 ### Library qualities
 
-| | **this library** | auth0_api | auth0_ex | prima_auth0_ex | auth0_jwks | auth0_plug | ueberauth_auth0 |
-|---|---|---|---|---|---|---|---|
-| Management resource groups | 22 | **~44** | 13 ² | 0 | 0 | 0 | 0 |
-| HTTP client | **Req** | HTTPoison | HTTPoison | Telepoison | HTTPoison | none | OAuth2 |
-| Single error struct | ✅ | — | — | — | — | — | — |
-| Response headers preserved | ✅ | — | — | — | — | — | — |
-| `Retry-After` on 429 | ✅ | auto-retry ³ | — | — | — | — | — |
-| Token cache renews before expiry | ✅ | — ⁴ | — | ✅ | n/a | n/a | n/a |
-| Single-flight token fetch | ✅ | — | — | ✅ | n/a | n/a | n/a |
-| Cached token redacted from `inspect` | ✅ | — | — | — | n/a | n/a | n/a |
-| Published on hex | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Last release | **2026-07** | 2025-12 | 2024-03 | 2026-06 | 2024-09 | 2024-06 | 2022-10 |
+| | **this library** | auth0_api | auth0_ex |
+|---|---|---|---|
+| Management resource groups | 22 | **~44** | 13 ¹ |
+| HTTP client | **Req** | HTTPoison | HTTPoison |
+| Single error struct | ✅ | — | — |
+| Response headers preserved | ✅ | — | — |
+| `Retry-After` on 429 | ✅ | auto-retry ² | — |
+| Token cache renews before expiry | ✅ | — ³ | — |
+| Single-flight token fetch | ✅ | — | — |
+| Cached token redacted from `inspect` | ✅ | — | — |
+| Last release | **2026-07** | 2025-12 | 2024-03 |
 
-² Includes `rule` and `blacklist`, which Auth0 has deprecated in favour of Actions.
-³ Retries internally and sleeps the calling process, rather than handing the delay back to you.
-⁴ Treats a token as valid until five seconds *past* its stated expiry.
+¹ Includes `rule` and `blacklist`, which Auth0 has deprecated in favour of Actions.
+² Retries internally and sleeps the calling process, rather than handing the delay back to you.
+³ Treats a token as valid until five seconds *past* its stated expiry.
+
+### Also on hex, for different jobs
+
+None of these call the Management API, so they complement this library rather than replace it:
+
+- **Verifying tokens that arrive on a request** — [auth0_jwks](https://hex.pm/packages/auth0_jwks),
+  [prima_auth0_ex](https://hex.pm/packages/prima_auth0_ex),
+  [auth0_plug](https://hex.pm/packages/auth0_plug)
+- **Browser login as an Ueberauth strategy** — [ueberauth_auth0](https://hex.pm/packages/ueberauth_auth0)
 
 ### Which to use
 
-**This library does not verify incoming tokens.** `Auth0Client.Authentication.jwks/0` fetches your tenant's key set, but performs no signature verification and pulls in no crypto library. Pair it with `auth0_jwks` or `prima_auth0_ex` if you need to authenticate requests. That separation is deliberate — verifying a token on the request path is cryptographic work that belongs in a library built for it, and none of the Management API packages above attempt it.
+**This library does not verify incoming tokens.** `Auth0Client.Authentication.jwks/0` fetches your tenant's key set, but performs no signature verification and pulls in no crypto library. Pair it with one of the packages above if you need to authenticate requests. That separation is deliberate — verifying a token on the request path is cryptographic work that belongs in a library built for it, and neither Management API package attempts it.
 
 **If you need Management API breadth, use `auth0_api`.** It covers roughly twice the surface, including branding, attack protection, email templates and several 2025-era additions. This library covers the resources most applications actually reach for, and spends its effort on the transport instead: one error struct that carries the response headers, and a management token cache designed for concurrent callers.
 
