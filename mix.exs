@@ -2,7 +2,7 @@ defmodule Auth0Client.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/tristanperalta/auth0_client"
-  @version "1.1.0"
+  @version "1.2.0"
 
   def project do
     [
@@ -56,7 +56,7 @@ defmodule Auth0Client.Mixfile do
 
   defp deps do
     [
-      {:req, "~> 0.6"},
+      {:req, "~> 0.7"},
       {:jason, "~> 1.4"},
       {:plug, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

@@ -156,6 +156,10 @@ defmodule Auth0Client.Api do
     [headers: Utils.drop_header(headers, "content-type"), form_multipart: fields]
   end
 
+  # Req turns a GET with a body into a POST, and an empty binary counts as a body.
+  # do_get/3 and do_delete/3 pass "" for "no body", so drop it rather than send it.
+  defp body_options("", headers), do: [headers: headers]
+
   defp body_options(req_body, headers), do: [headers: headers, body: req_body]
 
   # A 401 on a management call usually means the cached token was rejected — the

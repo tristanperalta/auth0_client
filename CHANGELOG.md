@@ -5,6 +5,21 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-08-04
+
+### Changed
+
+- **Requires Req `~> 0.7`** (was `~> 0.6`). Req 0.7 renamed and removed several steps; if you pass any of
+  `follow_redirects`, `output`, `decode_json`, `finch`, `pool_timeout`, or `pool_max_idle_time` through
+  `http_opts`, see the [Req 0.7 changelog](https://hexdocs.pm/req/changelog.html) — this library itself
+  uses none of them.
+
+### Fixed
+
+- **Every `GET` was sent as a `POST` under Req 0.7.** Req now promotes a `GET` with a body to `POST`, and
+  the empty binary these requests carried as "no body" counted as one. `GET` and `DELETE` without a body
+  no longer set one at all.
+
 ## [1.1.0] — 2026-07-22
 
 ### Fixed
@@ -152,5 +167,6 @@ Then, in order of how quietly each one fails:
    `email` in `opts`. Both changed shape rather than name; a guard turns an unmigrated `signup` call into a
    `FunctionClauseError` rather than a wrong request.
 
+[1.2.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.2.0
 [1.1.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.1.0
 [1.0.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.0.0
