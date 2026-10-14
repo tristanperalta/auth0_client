@@ -37,7 +37,7 @@ defmodule Auth0Client.Management.UserBlockTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/user-blocks/auth0|234234"
+      assert request.path == "/api/v2/user-blocks/auth0%7C234234"
       assert request.query_string == ""
     end
 
@@ -71,7 +71,7 @@ defmodule Auth0Client.Management.UserBlockTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/user-blocks/auth0|2342"
+      assert request.path == "/api/v2/user-blocks/auth0%7C2342"
       assert request.body == ""
     end
   end

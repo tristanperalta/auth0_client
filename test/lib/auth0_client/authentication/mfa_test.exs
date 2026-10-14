@@ -90,7 +90,7 @@ defmodule Auth0Client.Authentication.MfaTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/mfa/authenticators/totp|dev_1"
+      assert request.path == "/mfa/authenticators/totp%7Cdev_1"
       assert authorization(request) == {"authorization", "Bearer #{@access_token}"}
     end
   end

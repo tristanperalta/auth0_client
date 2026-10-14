@@ -6,6 +6,10 @@ defmodule Auth0Client.Api do
 
       use Auth0Client.Api
       use Auth0Client.Api, for: :mgmt
+
+  Paths are percent-encoded when the URL is built, so callers interpolate raw ids
+  (`"users/auth0|abc"`), never pre-encoded ones — `auth0%7Cabc` would be sent as
+  `auth0%257Cabc`.
   """
 
   alias Auth0Client.Config
@@ -21,7 +25,7 @@ defmodule Auth0Client.Api do
 
       @doc false
       def build_url(path, params) do
-        base = "#{base_url(unquote(opts)[:for])}#{path}"
+        base = "#{base_url(unquote(opts)[:for])}#{encode_path(path)}"
 
         case query_string(params) do
           "" -> base
@@ -104,6 +108,14 @@ defmodule Auth0Client.Api do
           req_body,
           extra_headers
         )
+      end
+
+      # Call sites interpolate ids straight into the path, and Auth0 user ids always
+      # carry a `|`, which Mint refuses to send. Escaping everything but unreserved
+      # characters and `/` keeps the separators and escapes the ids. An id holding a
+      # `/` would be split into segments; no Auth0 id does.
+      defp encode_path(path) do
+        URI.encode(path, &(URI.char_unreserved?(&1) or &1 == ?/))
       end
 
       # build_url/2 is public, so params may arrive as a keyword list without having

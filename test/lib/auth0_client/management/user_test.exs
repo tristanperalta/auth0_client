@@ -92,7 +92,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123"
+      assert request.path == "/api/v2/users/auth0%7C123"
       assert request.query == %{}
     end
 
@@ -151,7 +151,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "PATCH"
-      assert request.path == "/api/v2/users/auth0|123"
+      assert request.path == "/api/v2/users/auth0%7C123"
       assert request.body == %{"app_metadata" => %{"admin" => false}}
     end
 
@@ -172,7 +172,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123"
+      assert request.path == "/api/v2/users/auth0%7C123"
       assert request.body == ""
     end
   end
@@ -185,7 +185,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|233423/logs"
+      assert request.path == "/api/v2/users/auth0%7C233423/logs"
       assert request.query == %{}
     end
 
@@ -206,7 +206,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|234/enrollments"
+      assert request.path == "/api/v2/users/auth0%7C234/enrollments"
       assert request.query == %{}
     end
   end
@@ -219,7 +219,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|23423/multifactor/duo"
+      assert request.path == "/api/v2/users/auth0%7C23423/multifactor/duo"
     end
   end
 
@@ -244,7 +244,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|34234/recovery-code-regeneration"
+      assert request.path == "/api/v2/users/auth0%7C34234/recovery-code-regeneration"
       assert request.body == %{}
     end
   end
@@ -288,7 +288,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|23423/roles"
+      assert request.path == "/api/v2/users/auth0%7C23423/roles"
       assert request.query == %{}
     end
 
@@ -309,7 +309,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|123/roles"
+      assert request.path == "/api/v2/users/auth0%7C123/roles"
       assert request.body == %{"roles" => ["rol_1", "rol_2"]}
     end
   end
@@ -322,7 +322,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/roles"
+      assert request.path == "/api/v2/users/auth0%7C123/roles"
       assert request.body == %{"roles" => ["rol_1"]}
     end
   end
@@ -335,7 +335,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/permissions"
+      assert request.path == "/api/v2/users/auth0%7C123/permissions"
     end
   end
 
@@ -348,7 +348,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|123/permissions"
+      assert request.path == "/api/v2/users/auth0%7C123/permissions"
 
       assert request.body == %{
                "permissions" => [
@@ -384,7 +384,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/permissions"
+      assert request.path == "/api/v2/users/auth0%7C123/permissions"
       assert %{"permissions" => [_]} = request.body
     end
   end
@@ -397,7 +397,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/organizations"
+      assert request.path == "/api/v2/users/auth0%7C123/organizations"
     end
   end
 
@@ -409,7 +409,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/effective-roles"
+      assert request.path == "/api/v2/users/auth0%7C123/effective-roles"
     end
 
     test "effective_roles/2 supports checkpoint pagination" do
@@ -424,7 +424,7 @@ defmodule Auth0Client.Management.UserTest do
       User.effective_role_source_groups("auth0|123", role_id: "rol_1")
 
       request = assert_receive_request()
-      assert request.path == "/api/v2/users/auth0|123/effective-roles/sources/groups"
+      assert request.path == "/api/v2/users/auth0%7C123/effective-roles/sources/groups"
       assert request.query == %{"role_id" => "rol_1"}
     end
 
@@ -436,7 +436,7 @@ defmodule Auth0Client.Management.UserTest do
       )
 
       request = assert_receive_request()
-      assert request.path == "/api/v2/users/auth0|123/effective-permissions"
+      assert request.path == "/api/v2/users/auth0%7C123/effective-permissions"
       assert request.query == %{"resource_server_identifier" => "https://api.example.com"}
     end
 
@@ -451,7 +451,7 @@ defmodule Auth0Client.Management.UserTest do
       request = assert_receive_request()
 
       assert request.path ==
-               "/api/v2/users/auth0|123/effective-permissions/sources/effective-roles"
+               "/api/v2/users/auth0%7C123/effective-permissions/sources/effective-roles"
 
       assert request.query == %{
                "resource_server_identifier" => "https://api.example.com",
@@ -468,7 +468,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+      assert request.path == "/api/v2/users/auth0%7C123/authentication-methods"
     end
 
     test "authentication_method/2 gets one" do
@@ -477,7 +477,7 @@ defmodule Auth0Client.Management.UserTest do
       assert {:ok, %{"id" => "aum_1"}} = User.authentication_method("auth0|123", "aum_1")
 
       assert assert_receive_request().path ==
-               "/api/v2/users/auth0|123/authentication-methods/aum_1"
+               "/api/v2/users/auth0%7C123/authentication-methods/aum_1"
     end
 
     test "create_authentication_method/2 posts the method" do
@@ -488,7 +488,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+      assert request.path == "/api/v2/users/auth0%7C123/authentication-methods"
       assert request.body == %{"type" => "email", "email" => "a@b.com"}
     end
 
@@ -500,7 +500,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "PATCH"
-      assert request.path == "/api/v2/users/auth0|123/authentication-methods/aum_1"
+      assert request.path == "/api/v2/users/auth0%7C123/authentication-methods/aum_1"
       assert request.body == %{"name" => "Work phone"}
     end
 
@@ -511,7 +511,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/authentication-methods/aum_1"
+      assert request.path == "/api/v2/users/auth0%7C123/authentication-methods/aum_1"
     end
 
     # The body here is a bare array, not an object wrapping one.
@@ -525,7 +525,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "PUT"
-      assert request.path == "/api/v2/users/auth0|123/authentication-methods"
+      assert request.path == "/api/v2/users/auth0%7C123/authentication-methods"
       assert request.body == [%{"type" => "email", "email" => "a@b.com"}]
       assert is_list(request.body)
     end
@@ -539,7 +539,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/authenticators"
+      assert request.path == "/api/v2/users/auth0%7C123/authenticators"
     end
 
     test "invalidate_remember_browser/1 forces the next login to prompt" do
@@ -551,7 +551,7 @@ defmodule Auth0Client.Management.UserTest do
       assert request.method == "POST"
 
       assert request.path ==
-               "/api/v2/users/auth0|123/multifactor/actions/invalidate-remember-browser"
+               "/api/v2/users/auth0%7C123/multifactor/actions/invalidate-remember-browser"
     end
   end
 
@@ -563,7 +563,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/sessions"
+      assert request.path == "/api/v2/users/auth0%7C123/sessions"
       assert request.query == %{"take" => "10"}
     end
 
@@ -575,7 +575,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/sessions"
+      assert request.path == "/api/v2/users/auth0%7C123/sessions"
     end
 
     test "refresh_tokens/2 lists them" do
@@ -585,7 +585,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/refresh-tokens"
+      assert request.path == "/api/v2/users/auth0%7C123/refresh-tokens"
       assert request.query == %{"from" => "cursor"}
     end
 
@@ -596,7 +596,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|123/refresh-tokens"
+      assert request.path == "/api/v2/users/auth0%7C123/refresh-tokens"
     end
 
     test "revoke_access/2 revokes sessions and tokens together" do
@@ -606,7 +606,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|123/revoke-access"
+      assert request.path == "/api/v2/users/auth0%7C123/revoke-access"
       assert request.body == %{"preserve_refresh_tokens" => true}
     end
 
@@ -627,7 +627,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/groups"
+      assert request.path == "/api/v2/users/auth0%7C123/groups"
     end
 
     test "connected_accounts/2 lists them with checkpoint pagination" do
@@ -637,7 +637,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/users/auth0|123/connected-accounts"
+      assert request.path == "/api/v2/users/auth0%7C123/connected-accounts"
       assert request.query == %{"take" => "5"}
     end
 
@@ -648,7 +648,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/users/auth0|123/risk-assessments/clear"
+      assert request.path == "/api/v2/users/auth0%7C123/risk-assessments/clear"
       assert request.body == %{"assessors" => ["NewDevice"]}
     end
   end
@@ -661,7 +661,7 @@ defmodule Auth0Client.Management.UserTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/users/auth0|23423/authentication-methods"
+      assert request.path == "/api/v2/users/auth0%7C23423/authentication-methods"
     end
   end
 

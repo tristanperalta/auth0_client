@@ -405,7 +405,37 @@ defmodule Auth0Client.ApiTest do
 
       assert {:ok, _} = MgmtEndpoint.get_it("users/auth0|abc123")
 
-      assert assert_receive_request().path == "/api/v2/users/auth0|abc123"
+      assert assert_receive_request().path == "/api/v2/users/auth0%7Cabc123"
+    end
+
+    test "escapes the pipe in a user id" do
+      assert MgmtEndpoint.build_url("users/auth0|abc", %{}) ==
+               "https://brighterlink.auth0.com/api/v2/users/auth0%7Cabc"
+    end
+
+    test "escapes an id in the middle of a nested path, keeping the separators" do
+      assert MgmtEndpoint.build_url("users/auth0|abc/roles", %{}) ==
+               "https://brighterlink.auth0.com/api/v2/users/auth0%7Cabc/roles"
+    end
+
+    test "escapes spaces, hashes and question marks rather than ending the path" do
+      assert MgmtEndpoint.build_url("roles/a b#c?d", %{}) ==
+               "https://brighterlink.auth0.com/api/v2/roles/a%20b%23c%3Fd"
+    end
+
+    test "leaves an id with no reserved characters unchanged" do
+      assert MgmtEndpoint.build_url("clients/AbC-12_3.x~y", %{}) ==
+               "https://brighterlink.auth0.com/api/v2/clients/AbC-12_3.x~y"
+    end
+
+    test "encodes the query string as before alongside an escaped path" do
+      assert MgmtEndpoint.build_url("users/auth0|abc", %{fields: "name,email"}) ==
+               "https://brighterlink.auth0.com/api/v2/users/auth0%7Cabc?fields=name%2Cemail"
+    end
+
+    test "escapes an already-encoded id again, since ids must be passed raw" do
+      assert MgmtEndpoint.build_url("users/auth0%7Cabc", %{}) ==
+               "https://brighterlink.auth0.com/api/v2/users/auth0%257Cabc"
     end
   end
 end

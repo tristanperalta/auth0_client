@@ -6,6 +6,7 @@ defmodule Auth0Client.Management.OrganizationTest do
 
   @org_id "org_abc123"
   @user_id "auth0|user1"
+  @encoded_user_id "auth0%7Cuser1"
 
   describe "all/1" do
     test "gets all organizations" do
@@ -145,7 +146,7 @@ defmodule Auth0Client.Management.OrganizationTest do
 
       request = assert_receive_request()
       assert request.method == "GET"
-      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@user_id}/roles"
+      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/roles"
     end
 
     test "assign_member_roles/3 posts the role ids" do
@@ -155,7 +156,7 @@ defmodule Auth0Client.Management.OrganizationTest do
 
       request = assert_receive_request()
       assert request.method == "POST"
-      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@user_id}/roles"
+      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/roles"
       assert request.body == %{"roles" => ["rol_1"]}
     end
 
@@ -166,7 +167,7 @@ defmodule Auth0Client.Management.OrganizationTest do
 
       request = assert_receive_request()
       assert request.method == "DELETE"
-      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@user_id}/roles"
+      assert request.path == "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/roles"
       assert request.body == %{"roles" => ["rol_1"]}
     end
 
@@ -177,7 +178,7 @@ defmodule Auth0Client.Management.OrganizationTest do
       request = assert_receive_request()
 
       assert request.path ==
-               "/api/v2/organizations/#{@org_id}/members/#{@user_id}/effective-roles"
+               "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/effective-roles"
 
       assert request.query == %{"take" => "10"}
     end
@@ -189,7 +190,7 @@ defmodule Auth0Client.Management.OrganizationTest do
       request = assert_receive_request()
 
       assert request.path ==
-               "/api/v2/organizations/#{@org_id}/members/#{@user_id}/effective-roles/sources/groups"
+               "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/effective-roles/sources/groups"
 
       assert request.query == %{"role_id" => "rol_1"}
     end
@@ -204,7 +205,10 @@ defmodule Auth0Client.Management.OrganizationTest do
       member_roles_path = assert_receive_request().path
 
       assert role_members_path == "/api/v2/organizations/#{@org_id}/roles/rol_1/members"
-      assert member_roles_path == "/api/v2/organizations/#{@org_id}/members/#{@user_id}/roles"
+
+      assert member_roles_path ==
+               "/api/v2/organizations/#{@org_id}/members/#{@encoded_user_id}/roles"
+
       refute role_members_path == member_roles_path
     end
   end
