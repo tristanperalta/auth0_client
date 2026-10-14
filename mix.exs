@@ -2,7 +2,7 @@ defmodule Auth0Client.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/tristanperalta/auth0_client"
-  @version "1.2.0"
+  @version "1.2.1"
 
   def project do
     [

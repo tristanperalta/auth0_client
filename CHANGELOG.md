@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-10-14
+
+### Fixed
+
+- **Ids in the request path were never URL-encoded.** Every Auth0 user id contains a `|`
+  (`auth0|…`, `google-oauth2|…`), which Mint refuses to send, so `User.get/2`, `User.update/2` and every
+  `/users/{id}/…` call failed with `{:invalid_request_target, …}` before reaching Auth0. MFA
+  authenticator ids such as `totp|dev_…` hit the same error. Paths are now percent-encoded when the URL is
+  built, which covers every endpoint.
+
+  Pass ids **raw**. An id you have already encoded is encoded again: `auth0%7C…` is sent as
+  `auth0%257C…` and Auth0 will not find it.
+
 ## [1.2.0] — 2026-08-04
 
 ### Changed
@@ -167,6 +180,7 @@ Then, in order of how quietly each one fails:
    `email` in `opts`. Both changed shape rather than name; a guard turns an unmigrated `signup` call into a
    `FunctionClauseError` rather than a wrong request.
 
+[1.2.1]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.2.1
 [1.2.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.2.0
 [1.1.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.1.0
 [1.0.0]: https://github.com/tristanperalta/auth0_client/releases/tag/v1.0.0
